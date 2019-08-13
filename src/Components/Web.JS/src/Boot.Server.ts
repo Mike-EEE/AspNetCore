@@ -10,6 +10,7 @@ import { discoverComponents, CircuitDescriptor } from './Platform/Circuits/Circu
 import { setEventDispatcher } from './Rendering/RendererEventDispatcher';
 import { resolveOptions, BlazorOptions } from './Platform/Circuits/BlazorOptions';
 import { DefaultReconnectionHandler } from './Platform/Circuits/DefaultReconnectionHandler';
+import { attachRootComponentToLogicalElement } from './Rendering/Renderer';
 
 let renderingFailed = false;
 let started = false;
@@ -30,7 +31,7 @@ async function boot(userOptions?: Partial<BlazorOptions>): Promise<void> {
   const components = discoverComponents(document);
   const circuit = new CircuitDescriptor(components);
 
-  const initialConnection = await initializeConnection(options, logger);
+  const initialConnection = await initializeConnection(options, logger, circuit);
   const circuitStarted = await circuit.startCircuit(initialConnection);
   if (!circuitStarted) {
     logger.log(LogLevel.Information, 'Failed to start the circuit.');
@@ -43,7 +44,12 @@ async function boot(userOptions?: Partial<BlazorOptions>): Promise<void> {
       return false;
     }
 
-    const reconnection = existingConnection || await initializeConnection(options, logger);
+    const reconnection = existingConnection || await initializeConnection(options, logger, circuit);
+    if (reconnection.state !== signalR.HubConnectionState.Connected) {
+      logger.log(LogLevel.Information, 'Reconnection attempt failed. Unable to connect to the server.');
+      return false;
+    }
+
     if (!(await circuit.reconnect(reconnection))) {
       logger.log(LogLevel.Information, 'Reconnection attempt to the circuit was rejected by the server. This may indicate that the associated state is no longer available on the server.');
       return false;
@@ -70,7 +76,7 @@ async function boot(userOptions?: Partial<BlazorOptions>): Promise<void> {
   logger.log(LogLevel.Information, 'Blazor server-side application started.');
 }
 
-async function initializeConnection(options: BlazorOptions, logger: Logger): Promise<signalR.HubConnection> {
+async function initializeConnection(options: BlazorOptions, logger: Logger, circuit: CircuitDescriptor): Promise<signalR.HubConnection> {
   const hubProtocol = new MessagePackHubProtocol();
   (hubProtocol as unknown as { name: string }).name = 'blazorpack';
 
@@ -91,6 +97,7 @@ async function initializeConnection(options: BlazorOptions, logger: Logger): Pro
     return connection.send('OnLocationChanged', uri, intercepted);
   });
 
+  connection.on('JS.AttachComponent', (componentId, selector) => attachRootComponentToLogicalElement(0, circuit.resolveElement(selector), componentId));
   connection.on('JS.BeginInvokeJS', DotNet.jsCallDispatcher.beginInvokeJSFromDotNet);
   connection.on('JS.EndInvokeDotNet', (args: string) => DotNet.jsCallDispatcher.endInvokeDotNetFromJS(...(JSON.parse(args) as [string, boolean, unknown])));
 

@@ -46,7 +46,7 @@ export function toLogicalRootCommentElement(start: Comment, end: Comment): Logic
   // |- *div
   // |- *component
   // |- *footer
-  if (!start.parentNode){
+  if (!start.parentNode) {
     throw new Error(`Comment not connected to the DOM ${start.textContent}`);
   }
 
@@ -55,8 +55,10 @@ export function toLogicalRootCommentElement(start: Comment, end: Comment): Logic
   const children = getLogicalChildrenArray(parentLogicalElement);
   Array.from(parent.childNodes).forEach(n => children.push(n as unknown as LogicalElement));
   start[logicalParentPropname] = parentLogicalElement;
-  start[logicalEndSiblingPropname] = end;
-  toLogicalElement(end, /* allowExistingcontents */ true);
+  if (end) {
+    start[logicalEndSiblingPropname] = end;
+    toLogicalElement(end, /* allowExistingcontents */ true);
+  }
   return toLogicalElement(start, /* allowExistingContents */ true);
 }
 

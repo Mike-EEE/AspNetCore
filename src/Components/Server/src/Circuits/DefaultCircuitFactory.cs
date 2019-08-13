@@ -89,7 +89,7 @@ namespace Microsoft.AspNetCore.Components.Server.Circuits
                 _options,
                 client,
                 renderer,
-                (IReadOnlyList<ComponentDescriptor>)components,
+                components,
                 jsRuntime,
                 circuitHandlers,
                 _loggerFactory.CreateLogger<CircuitHost>());

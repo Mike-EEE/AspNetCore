@@ -69,7 +69,6 @@ namespace Microsoft.AspNetCore.Mvc.Rendering
                     return await PrerenderedBlazorComponentAsync(context, typeof(TComponent), parametersCollection);
                 case RenderMode.Html:
                     return await StaticComponentAsync(context, typeof(TComponent), parametersCollection);
-                case RenderMode.NonPrerendered:
                 default:
                     throw new ArgumentException("Invalid render mode", nameof(renderMode));
             }

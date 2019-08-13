@@ -36,7 +36,6 @@ namespace Microsoft.AspNetCore.Components
 
         public IDataProtector DataProtector { get; }
 
-
         public bool TryDeserializeComponentDescriptorCollection(string serializedComponentRecords, out List<ComponentDescriptor> descriptors)
         {
             var records = JsonSerializer.Deserialize<IEnumerable<ComponentRecord>>(serializedComponentRecords, _jsonSerializationOptions);

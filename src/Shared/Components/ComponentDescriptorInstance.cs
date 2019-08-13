@@ -8,8 +8,8 @@ namespace Microsoft.AspNetCore.Components
         public ComponentDescriptorInstance(int sequence, string rootComponent, string invocationId) =>
             (Sequence, RootComponent, InvocationId) = (sequence, rootComponent, invocationId);
 
-        public int Sequence { get; }
-        public string RootComponent { get; }
-        public string InvocationId { get; }
+        public int Sequence { get; set; }
+        public string RootComponent { get; set; }
+        public string InvocationId { get; set; }
     }
 }

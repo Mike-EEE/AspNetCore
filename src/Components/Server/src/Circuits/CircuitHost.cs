@@ -113,7 +113,7 @@ namespace Microsoft.AspNetCore.Components.Server.Circuits
                     for (var i = 0; i < count; i++)
                     {
                         var (componentType, domElementSelector) = Descriptors[i];
-                        await Renderer.AddComponentAsync(componentType, domElementSelector);
+                        await Renderer.AddComponentAsync(componentType, domElementSelector.ToString());
                     }
 
                     Log.InitializationSucceeded(_logger);
