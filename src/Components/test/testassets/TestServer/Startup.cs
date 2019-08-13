@@ -1,10 +1,7 @@
 using System.Threading.Tasks;
-using BasicTestApp;
-using BasicTestApp.RouterTest;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -89,7 +86,7 @@ namespace TestServer
 
                 app.UseEndpoints(endpoints =>
                 {
-                    endpoints.MapBlazorHub(typeof(Index), selector: "root");
+                    endpoints.MapBlazorHub();
                     endpoints.MapFallbackToClientSideBlazor<BasicTestApp.Startup>("index.html");
                 });
             });
@@ -103,7 +100,7 @@ namespace TestServer
                 app.UseEndpoints(endpoints =>
                 {
                     endpoints.MapFallbackToPage("/PrerenderedHost");
-                    endpoints.MapBlazorHub<TestRouter>(selector: "app");
+                    endpoints.MapBlazorHub();
                 });
             });
 
