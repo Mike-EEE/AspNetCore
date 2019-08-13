@@ -175,6 +175,10 @@ namespace Microsoft.Extensions.DependencyInjection
 
             services.TryAddSingleton<IJsonHelper, SystemTextJsonHelper>();
 
+            // Component services
+            services.TryAddSingleton<ComponentDescriptorSerializer>();
+            services.TryAddSingleton<RootComponentTypeCache>();
+
             //
             // View Components
             //

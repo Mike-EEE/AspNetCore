@@ -56,7 +56,8 @@ namespace Microsoft.Extensions.DependencyInjection
             // Components entrypoints, this lot is the same and repeated registrations are a no-op.
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<StaticFileOptions>, ConfigureStaticFilesOptions>());
             services.TryAddSingleton<DefaultCircuitFactory>();
-
+            services.TryAddSingleton<ComponentDescriptorSerializer>();
+            services.TryAddSingleton<RootComponentTypeCache>();
             services.TryAddSingleton<CircuitIdFactory>();
 
             services.TryAddScoped(s => s.GetRequiredService<ICircuitAccessor>().Circuit);

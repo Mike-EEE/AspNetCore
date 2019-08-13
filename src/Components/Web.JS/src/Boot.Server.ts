@@ -6,7 +6,7 @@ import { shouldAutoStart } from './BootCommon';
 import { RenderQueue } from './Platform/Circuits/RenderQueue';
 import { ConsoleLogger } from './Platform/Logging/Loggers';
 import { LogLevel, Logger } from './Platform/Logging/Logger';
-import { startCircuit } from './Platform/Circuits/CircuitManager';
+import { discoverComponents, CircuitDescriptor } from './Platform/Circuits/CircuitManager';
 import { setEventDispatcher } from './Rendering/RendererEventDispatcher';
 import { resolveOptions, BlazorOptions } from './Platform/Circuits/BlazorOptions';
 import { DefaultReconnectionHandler } from './Platform/Circuits/DefaultReconnectionHandler';
@@ -27,8 +27,15 @@ async function boot(userOptions?: Partial<BlazorOptions>): Promise<void> {
   options.reconnectionHandler = options.reconnectionHandler || window['Blazor'].defaultReconnectionHandler;
   logger.log(LogLevel.Information, 'Starting up blazor server-side application.');
 
+  const components = discoverComponents(document);
+  const circuit = new CircuitDescriptor(components);
+
   const initialConnection = await initializeConnection(options, logger);
-  const circuit = await startCircuit(initialConnection);
+  const circuitStarted = await circuit.startCircuit(initialConnection);
+  if (!circuitStarted) {
+    logger.log(LogLevel.Information, 'Failed to start the circuit.');
+    return;
+  }
 
   const reconnect = async (existingConnection?: signalR.HubConnection): Promise<boolean> => {
     if (renderingFailed) {
@@ -51,7 +58,8 @@ async function boot(userOptions?: Partial<BlazorOptions>): Promise<void> {
     'unload',
     () => {
       const data = new FormData();
-      data.set('circuitId', circuit.circuitId);
+      const circuitId = circuit.circuitId!;
+      data.append('circuitId', circuitId);
       navigator.sendBeacon('_blazor/disconnect', data);
     },
     false
