@@ -75,7 +75,6 @@ namespace Microsoft.AspNetCore.Components.Server.Circuits
                 scope.ServiceProvider,
                 _loggerFactory,
                 _options,
-                jsRuntime,
                 client,
                 _loggerFactory.CreateLogger<RemoteRenderer>());
 
