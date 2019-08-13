@@ -37,20 +37,17 @@ namespace Microsoft.AspNetCore.Components.Server
     internal sealed class ComponentHub : Hub
     {
         private static readonly object CircuitKey = new object();
-        private readonly CircuitFactory _circuitFactory;
+        private readonly DefaultCircuitFactory _circuitFactory;
         private readonly CircuitRegistry _circuitRegistry;
-        private readonly CircuitOptions _options;
         private readonly ILogger _logger;
 
         public ComponentHub(
-            CircuitFactory circuitFactory,
+            DefaultCircuitFactory circuitFactory,
             CircuitRegistry circuitRegistry,
-            ILogger<ComponentHub> logger,
-            IOptions<CircuitOptions> options)
+            ILogger<ComponentHub> logger)
         {
             _circuitFactory = circuitFactory;
             _circuitRegistry = circuitRegistry;
-            _options = options.Value;
             _logger = logger;
         }
 
@@ -72,7 +69,7 @@ namespace Microsoft.AspNetCore.Components.Server
             return _circuitRegistry.DisconnectAsync(circuitHost, Context.ConnectionId);
         }
 
-        public async ValueTask<string> StartCircuit(string baseUri, string uri)
+        public async ValueTask<string> StartCircuit(string baseUri, string uri, string serializedDescriptors)
         {
             var circuitHost = GetCircuit();
             if (circuitHost != null)
@@ -101,19 +98,11 @@ namespace Microsoft.AspNetCore.Components.Server
                 return null;
             }
 
-            // From this point, we can try to actually initialize the circuit.
-            if (DefaultCircuitFactory.ResolveComponentMetadata(Context.GetHttpContext()).Count == 0)
-            {
-                // No components preregistered so return. This is totally normal if the components were prerendered.
-                Log.NoComponentsRegisteredInEndpoint(_logger, Context.GetHttpContext().GetEndpoint()?.DisplayName);
-                return null;
-            }
-
             try
             {
                 var circuitClient = new CircuitClientProxy(Clients.Caller, Context.ConnectionId);
                 circuitHost = _circuitFactory.CreateCircuitHost(
-                    Context.GetHttpContext(),
+                    serializedDescriptors,
                     circuitClient,
                     baseUri,
                     uri,
@@ -261,9 +250,6 @@ namespace Microsoft.AspNetCore.Components.Server
 
         private static class Log
         {
-            private static readonly Action<ILogger, string, Exception> _noComponentsRegisteredInEndpoint =
-                LoggerMessage.Define<string>(LogLevel.Debug, new EventId(1, "NoComponentsRegisteredInEndpoint"), "No components registered in the current endpoint '{Endpoint}'");
-
             private static readonly Action<ILogger, long, Exception> _receivedConfirmationForBatch =
                 LoggerMessage.Define<long>(LogLevel.Debug, new EventId(2, "ReceivedConfirmationForBatch"), "Received confirmation for batch {BatchId}");
 
@@ -284,8 +270,6 @@ namespace Microsoft.AspNetCore.Components.Server
 
             private static readonly Action<ILogger, Exception> _circuitInitializationFailed =
                 LoggerMessage.Define(LogLevel.Debug, new EventId(8, "CircuitInitializationFailed"), "Circuit initialization failed");
-
-            public static void NoComponentsRegisteredInEndpoint(ILogger logger, string endpointDisplayName) => _noComponentsRegisteredInEndpoint(logger, endpointDisplayName, null);
 
             public static void ReceivedConfirmationForBatch(ILogger logger, long batchId) => _receivedConfirmationForBatch(logger, batchId, null);
 

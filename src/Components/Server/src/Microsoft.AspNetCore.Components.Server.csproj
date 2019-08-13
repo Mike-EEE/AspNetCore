@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netcoreapp3.0</TargetFramework>
@@ -65,6 +65,13 @@
     <Compile Include="$(MessagePackRoot)SequencePool.cs" LinkBase="BlazorPack\MessagePack" />
     <Compile Include="$(MessagePackRoot)SequenceReader.cs" LinkBase="BlazorPack\MessagePack" />
     <Compile Include="$(MessagePackRoot)SequenceReaderExtensions.cs" LinkBase="BlazorPack\MessagePack" />
+
+    <!-- Shared descriptor infrastructure with MVC -->
+    <Compile Include="$(RepoRoot)src\Shared\Components\ComponentDescriptor.cs" LinkBase="Descriptors" />
+    <Compile Include="$(RepoRoot)src\Shared\Components\ComponentDescriptorInstance.cs" LinkBase="Descriptors" />
+    <Compile Include="$(RepoRoot)src\Shared\Components\ComponentDescriptorSerializer.cs" LinkBase="Descriptors" />
+    <Compile Include="$(RepoRoot)src\Shared\Components\ComponentRecord.cs" LinkBase="Descriptors" />
+    <Compile Include="$(RepoRoot)src\Shared\Components\RootComponentTypeCache.cs" LinkBase="Descriptors" />
   </ItemGroup>
 
   <PropertyGroup>

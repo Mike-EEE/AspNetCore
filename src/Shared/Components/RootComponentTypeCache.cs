@@ -1,7 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 
-namespace Microsoft.AspNetCore.Mvc.ViewFeatures
+namespace Microsoft.AspNetCore.Components
 {
     internal class RootComponentTypeCache
     {
