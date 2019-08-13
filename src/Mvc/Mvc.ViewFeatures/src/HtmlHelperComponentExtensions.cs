@@ -20,15 +20,16 @@ namespace Microsoft.AspNetCore.Mvc.Rendering
         /// Renders the <typeparamref name="TComponent"/> <see cref="IComponent"/>.
         /// </summary>
         /// <param name="htmlHelper">The <see cref="IHtmlHelper"/>.</param>
+        /// <param name="renderMode">The <see cref="RenderMode"/> for the component.</param>
         /// <returns>The HTML produced by the rendered <typeparamref name="TComponent"/>.</returns>
-        public static Task<IHtmlContent> RenderComponentAsync<TComponent>(this IHtmlHelper htmlHelper) where TComponent : IComponent
+        public static Task<IHtmlContent> RenderComponentAsync<TComponent>(this IHtmlHelper htmlHelper, RenderMode renderMode) where TComponent : IComponent
         {
             if (htmlHelper == null)
             {
                 throw new ArgumentNullException(nameof(htmlHelper));
             }
 
-            return htmlHelper.RenderComponentAsync<TComponent>(null);
+            return htmlHelper.RenderComponentAsync<TComponent>(null, renderMode);
         }
 
         /// <summary>
@@ -37,10 +38,12 @@ namespace Microsoft.AspNetCore.Mvc.Rendering
         /// <param name="htmlHelper">The <see cref="IHtmlHelper"/>.</param>
         /// <param name="parameters">An <see cref="object"/> containing the parameters to pass
         /// to the component.</param>
+        /// <param name="renderMode">The <see cref="RenderMode"/> for the component.</param>
         /// <returns>The HTML produced by the rendered <typeparamref name="TComponent"/>.</returns>
         public static async Task<IHtmlContent> RenderComponentAsync<TComponent>(
             this IHtmlHelper htmlHelper,
-            object parameters) where TComponent : IComponent
+            object parameters,
+            RenderMode renderMode) where TComponent : IComponent
         {
             if (htmlHelper == null)
             {
