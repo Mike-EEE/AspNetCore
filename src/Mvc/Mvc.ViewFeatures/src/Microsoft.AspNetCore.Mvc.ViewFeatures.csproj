@@ -26,4 +26,12 @@ Microsoft.AspNetCore.Mvc.ViewComponent</Description>
     <Reference Include="Microsoft.AspNetCore.Components.Authorization" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Include="..\..\..\Shared\Components\ComponentDescriptor.cs" />
+    <Compile Include="..\..\..\Shared\Components\ComponentDescriptorSerializer.cs" />
+    <Compile Include="..\..\..\Shared\Components\RootComponentTypeCache.cs" />
+    <Compile Include="..\..\..\Shared\Components\ComponentRecord.cs" />
+    <Compile Include="..\..\..\Shared\Components\ComponentDescriptorInstance.cs" />
+  </ItemGroup>
+
 </Project>

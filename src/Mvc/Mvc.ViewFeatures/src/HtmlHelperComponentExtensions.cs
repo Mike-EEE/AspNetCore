@@ -5,6 +5,7 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Html;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.AspNetCore.Mvc.ViewFeatures.RazorComponents;
 using Microsoft.Extensions.DependencyInjection;
@@ -50,20 +51,74 @@ namespace Microsoft.AspNetCore.Mvc.Rendering
                 throw new ArgumentNullException(nameof(htmlHelper));
             }
 
-            var httpContext = htmlHelper.ViewContext.HttpContext;
-            var serviceProvider = httpContext.RequestServices;
-            var prerenderer = serviceProvider.GetRequiredService<StaticComponentRenderer>();
+            if (renderMode == default)
+            {
+                throw new ArgumentException("Can't render a component statically without prerendering it.", nameof(renderMode));
+            }
 
             var parametersCollection = parameters == null ?
                 ParameterView.Empty :
                 ParameterView.FromDictionary(HtmlHelper.ObjectToDictionary(parameters));
 
+            var context = htmlHelper.ViewContext.HttpContext;
+            switch (renderMode)
+            {
+                case RenderMode.Server:
+                    return NonPrerenderedBlazorComponent(context, typeof(TComponent), parametersCollection);
+                case RenderMode.ServerPrerendered:
+                    return await PrerenderedBlazorComponentAsync(context, typeof(TComponent), parametersCollection);
+                case RenderMode.Html:
+                    return await StaticComponentAsync(context, typeof(TComponent), parametersCollection);
+                case RenderMode.NonPrerendered:
+                default:
+                    throw new ArgumentException("Invalid render mode", nameof(renderMode));
+            }
+        }
+
+        private static async Task<IHtmlContent> StaticComponentAsync(HttpContext context, Type type, ParameterView parametersCollection)
+        {
+            var serviceProvider = context.RequestServices;
+            var prerenderer = serviceProvider.GetRequiredService<StaticComponentRenderer>();
+
+
             var result = await prerenderer.PrerenderComponentAsync(
                 parametersCollection,
-                httpContext,
-                typeof(TComponent));
+                context,
+                type);
 
             return new ComponentHtmlContent(result);
+        }
+
+        private static async Task<IHtmlContent> PrerenderedBlazorComponentAsync(HttpContext context, Type type, ParameterView parametersCollection)
+        {
+            var serviceProvider = context.RequestServices;
+            var prerenderer = serviceProvider.GetRequiredService<StaticComponentRenderer>();
+            var invocationSerializer = serviceProvider.GetRequiredService<ComponentDescriptorSerializer>();
+
+            var currentInvocation = invocationSerializer.SerializeInvocation(
+                context,
+                type,
+                parametersCollection,
+                prerendered: true);
+
+            var result = await prerenderer.PrerenderComponentAsync(
+                parametersCollection,
+                context,
+                type);
+
+            return new ComponentHtmlContent(
+                invocationSerializer.GetPreamble(currentInvocation),
+                result,
+                invocationSerializer.GetEpilogue(currentInvocation));
+        }
+
+        private static IHtmlContent NonPrerenderedBlazorComponent(HttpContext context, Type type, ParameterView parametersCollection)
+        {
+            var serviceProvider = context.RequestServices;
+            var invocationSerializer = serviceProvider.GetRequiredService<ComponentDescriptorSerializer>();
+            var currentInvocation = invocationSerializer.SerializeInvocation(context, type, parametersCollection, prerendered:false);
+
+            return new ComponentHtmlContent(invocationSerializer.GetPreamble(currentInvocation));
         }
     }
 }

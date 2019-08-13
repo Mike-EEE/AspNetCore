@@ -46,6 +46,6 @@ namespace Microsoft.AspNetCore.Mvc.ViewFeatures
         /// <summary>
         /// An alias for RenderMode.Static | RenderMode.Prerendered
         /// </summary>
-        Html = 0b00000_01_1
+        Html = 0b00000_00_1
     }
 }
