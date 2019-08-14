@@ -30,7 +30,6 @@ Microsoft.AspNetCore.Mvc.ViewComponent</Description>
     <Compile Include="..\..\..\Shared\Components\ComponentDescriptor.cs" />
     <Compile Include="..\..\..\Shared\Components\ComponentDescriptorSerializer.cs" />
     <Compile Include="..\..\..\Shared\Components\ComponentDescriptorSerializer.Serialize.cs" />
-    <Compile Include="..\..\..\Shared\Components\RootComponentTypeCache.cs" />
     <Compile Include="..\..\..\Shared\Components\ComponentRecord.cs" />
     <Compile Include="..\..\..\Shared\Components\ComponentDescriptorInstance.cs" />
   </ItemGroup>

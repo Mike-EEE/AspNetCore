@@ -177,7 +177,6 @@ namespace Microsoft.Extensions.DependencyInjection
 
             // Component services
             services.TryAddSingleton<ComponentDescriptorSerializer>();
-            services.TryAddSingleton<RootComponentTypeCache>();
 
             //
             // View Components
