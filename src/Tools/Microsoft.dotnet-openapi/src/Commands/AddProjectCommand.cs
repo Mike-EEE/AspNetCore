@@ -8,7 +8,7 @@ using Microsoft.Extensions.Tools.Internal;
 
 namespace Microsoft.DotNet.OpenApi.Commands
 {
-    internal class AddProjectCommand :  BaseCommand
+    internal class AddProjectCommand : BaseCommand
     {
         private const string CommandName = "project";
 
@@ -17,18 +17,21 @@ namespace Microsoft.DotNet.OpenApi.Commands
         public AddProjectCommand(BaseCommand parent)
             : base(parent, CommandName)
         {
+            _codeGeneratorOption = Option("-c|--code-generator", "The code generator to use. Defaults to 'NSwagCSharp'.", CommandOptionType.SingleValue);
             _sourceProjectArg = Argument(SourceProjectArgName, $"The OpenAPI project to add. This must be the path to project file(s) containing OpenAPI endpoints", multipleValues: true);
         }
 
         internal readonly CommandArgument _sourceProjectArg;
+        internal readonly CommandOption _codeGeneratorOption;
 
         protected override Task<int> ExecuteCoreAsync()
         {
             var projectFilePath = ResolveProjectFile(ProjectFileOption);
 
+            var codeGenerator = GetCodeGenerator(_codeGeneratorOption);
+
             foreach (var sourceFile in _sourceProjectArg.Values)
             {
-                var codeGenerator = CodeGenerator.NSwagCSharp;
                 EnsurePackagesInProject(projectFilePath, codeGenerator);
 
                 AddServiceReference(OpenApiProjectReference, projectFilePath, sourceFile);
@@ -39,9 +42,10 @@ namespace Microsoft.DotNet.OpenApi.Commands
 
         protected override bool ValidateArguments()
         {
-            foreach(var sourceFile in _sourceProjectArg.Values)
+            ValidateCodeGenerator(_codeGeneratorOption);
+            foreach (var sourceFile in _sourceProjectArg.Values)
             {
-                if(!IsProjectFile(sourceFile))
+                if (!IsProjectFile(sourceFile))
                 {
                     throw new ArgumentException($"{SourceProjectArgName} of '{sourceFile}' was not valid. Valid values must be project file(s)");
                 }

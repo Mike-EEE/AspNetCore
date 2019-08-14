@@ -123,6 +123,41 @@ namespace Microsoft.DotNet.OpenApi.Add.Tests
         }
 
         [Fact]
+        public async Task OpenApi_Add_NSwagTypeScript()
+        {
+            var project = CreateBasicProject(withOpenApi: true);
+            var nswagJsonFile = project.NSwagJsonFile;
+
+            var app = GetApplication();
+            var run = app.Execute(new[] { "add", "file", nswagJsonFile, "--code-generator", "NSwagTypeScript" });
+
+            Assert.True(string.IsNullOrEmpty(_error.ToString()), $"Threw error: {_error.ToString()}");
+            Assert.Equal(0, run);
+
+            // csproj contents
+            var csproj = new FileInfo(project.Project.Path);
+            using (var csprojStream = csproj.OpenRead())
+            using (var reader = new StreamReader(csprojStream))
+            {
+                var content = await reader.ReadToEndAsync();
+                Assert.Contains("<PackageReference Include=\"NSwag.ApiDescription.Client\" CodeGenerator=\"NSwagTypeScript\" Version=\"", content);
+                Assert.Contains($"<OpenApiReference Include=\"{nswagJsonFile}\"", content);
+            }
+
+            // Build project and make sure it compiles
+            var buildProc = ProcessEx.Run(_outputHelper, _tempDir.Root, "dotnet", "build");
+            await buildProc.Exited;
+            Assert.True(buildProc.ExitCode == 0, $"Build failed: {buildProc.Output}");
+
+            // Run project and make sure it doesn't crash
+            using (var runProc = ProcessEx.Run(_outputHelper, _tempDir.Root, "dotnet", "run"))
+            {
+                Thread.Sleep(100);
+                Assert.False(runProc.HasExited, $"Run failed with: {runProc.Output}");
+            }
+        }
+
+        [Fact]
         public async Task OpenApi_Add_FromJson()
         {
             var project = CreateBasicProject(withOpenApi: true);

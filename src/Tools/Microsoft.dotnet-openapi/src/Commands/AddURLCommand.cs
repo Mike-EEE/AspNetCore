@@ -20,6 +20,7 @@ namespace Microsoft.DotNet.OpenApi.Commands
         public AddURLCommand(AddCommand parent)
             : base(parent, CommandName)
         {
+            _codeGeneratorOption = Option("-c|--code-generator", "The code generator to use. Defaults to 'NSwagCSharp'.", CommandOptionType.SingleValue);
             _outputFileOption = Option(OutputFileName, "The destination to download the remote OpenAPI file to.", CommandOptionType.SingleValue);
             _sourceFileArg = Argument(SourceUrlArgName, $"The OpenAPI file to add. This must be a URL to a remote OpenAPI file.", multipleValues: true);
         }
@@ -27,12 +28,14 @@ namespace Microsoft.DotNet.OpenApi.Commands
         internal readonly CommandOption _outputFileOption;
 
         internal readonly CommandArgument _sourceFileArg;
+        internal readonly CommandOption _codeGeneratorOption;
 
         protected override async Task<int> ExecuteCoreAsync()
         {
             var projectFilePath = ResolveProjectFile(ProjectFileOption);
 
             var sourceFile = Ensure.NotNullOrEmpty(_sourceFileArg.Value, SourceUrlArgName);
+            var codeGenerator = GetCodeGenerator(_codeGeneratorOption);
 
             string outputFile;
             if (_outputFileOption.HasValue())
@@ -43,7 +46,6 @@ namespace Microsoft.DotNet.OpenApi.Commands
             {
                 outputFile = Path.Combine(DefaultOpenAPIDir, DefaultOpenAPIFile);
             }
-            var codeGenerator = CodeGenerator.NSwagCSharp;
             EnsurePackagesInProject(projectFilePath, codeGenerator);
 
             if (IsUrl(sourceFile))
@@ -65,6 +67,7 @@ namespace Microsoft.DotNet.OpenApi.Commands
 
         protected override bool ValidateArguments()
         {
+            ValidateCodeGenerator(_codeGeneratorOption);
             Ensure.NotNullOrEmpty(_sourceFileArg.Value, SourceUrlArgName);
             return true;
         }

@@ -136,7 +136,7 @@ namespace Microsoft.DotNet.OpenApi.Commands
 
             if (sourceUrl != null)
             {
-                if(items.Any(i => string.Equals(i.GetMetadataValue(SourceUrlAttrName), sourceUrl)))
+                if (items.Any(i => string.Equals(i.GetMetadataValue(SourceUrlAttrName), sourceUrl)))
                 {
                     Warning.Write($"A reference to '{sourceUrl}' already exists in '{project.FullPath}'.");
                     return;
@@ -177,12 +177,39 @@ namespace Microsoft.DotNet.OpenApi.Commands
             await WriteToFileAsync(content, destinationPath, overwrite);
         }
 
+        internal CodeGenerator GetCodeGenerator(CommandOption codeGeneratorOption)
+        {
+            CodeGenerator codeGenerator;
+            if (codeGeneratorOption.HasValue())
+            {
+                codeGenerator = Enum.Parse<CodeGenerator>(codeGeneratorOption.Value());
+            }
+            else
+            {
+                codeGenerator = CodeGenerator.NSwagCSharp;
+            }
+
+            return codeGenerator;
+        }
+
+        internal void ValidateCodeGenerator(CommandOption codeGeneratorOption)
+        {
+            if (codeGeneratorOption.HasValue())
+            {
+                var value = codeGeneratorOption.Value();
+                if (!Enum.TryParse<CodeGenerator>(value, out CodeGenerator _))
+                {
+                    throw new ArgumentException($"Invalid value '{value}' given as code generator.");
+                }
+            }
+        }
+
         internal void EnsurePackagesInProject(FileInfo projectFile, CodeGenerator codeGenerator)
         {
             var packages = GetServicePackages(codeGenerator);
             foreach (var (packageId, version) in packages)
             {
-                var args = new [] {
+                var args = new[] {
                     "add",
                     "package",
                     packageId,
@@ -192,7 +219,7 @@ namespace Microsoft.DotNet.OpenApi.Commands
                 };
 
                 var muxer = DotNetMuxer.MuxerPathOrDefault();
-                if(string.IsNullOrEmpty(muxer))
+                if (string.IsNullOrEmpty(muxer))
                 {
                     throw new ArgumentException($"dotnet was not found on the path.");
                 }
@@ -209,7 +236,7 @@ namespace Microsoft.DotNet.OpenApi.Commands
                 var process = Process.Start(startInfo);
 
                 var timeout = 20;
-                if (!process.WaitForExit(timeout*1000))
+                if (!process.WaitForExit(timeout * 1000))
                 {
                     throw new ArgumentException($"Adding package `{packageId}` to `{projectFile.Directory}` took longer than {timeout} seconds.");
                 }

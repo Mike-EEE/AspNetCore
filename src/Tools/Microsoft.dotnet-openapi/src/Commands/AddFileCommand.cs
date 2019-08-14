@@ -19,10 +19,12 @@ namespace Microsoft.DotNet.OpenApi.Commands
         public AddFileCommand(AddCommand parent)
             : base(parent, CommandName)
         {
+            _codeGeneratorOption = Option("-c|--code-generator", "The code generator to use. Defaults to 'NSwagCSharp'.", CommandOptionType.SingleValue);
             _sourceFileArg = Argument(SourceFileArgName, $"The OpenAPI file to add. This must be a path to local OpenAPI file(s)", multipleValues: true);
         }
 
         internal readonly CommandArgument _sourceFileArg;
+        internal readonly CommandOption _codeGeneratorOption;
 
         private readonly string[] ApprovedExtensions = new[] { ".json", ".yaml", ".yml" };
 
@@ -31,10 +33,10 @@ namespace Microsoft.DotNet.OpenApi.Commands
             var projectFilePath = ResolveProjectFile(ProjectFileOption);
 
             Ensure.NotNullOrEmpty(_sourceFileArg.Value, SourceFileArgName);
+            var codeGenerator = GetCodeGenerator(_codeGeneratorOption);
 
             foreach (var sourceFile in _sourceFileArg.Values)
             {
-                var codeGenerator = CodeGenerator.NSwagCSharp;
                 EnsurePackagesInProject(projectFilePath, codeGenerator);
                 if (IsLocalFile(sourceFile))
                 {
@@ -61,6 +63,8 @@ namespace Microsoft.DotNet.OpenApi.Commands
 
         protected override bool ValidateArguments()
         {
+            ValidateCodeGenerator(_codeGeneratorOption);
+
             Ensure.NotNullOrEmpty(_sourceFileArg.Value, SourceFileArgName);
             return true;
         }
