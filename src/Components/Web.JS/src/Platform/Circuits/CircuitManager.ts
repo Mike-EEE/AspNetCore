@@ -68,9 +68,8 @@ export class CircuitDescriptor {
 
 interface ComponentRecord {
   type: string;
-  seuqence?: number;
-  descriptor?: string;
-  selector?: string;
+  sequence: number;
+  descriptor: string;
 }
 
 export class ComponentDescriptor {
@@ -80,26 +79,23 @@ export class ComponentDescriptor {
 
   public end?: Node;
 
-  public sequence?: number;
+  public sequence: number;
 
-  public descriptor?: string;
+  public descriptor: string;
 
-  public selector?: string;
-
-  public constructor(type: string, start: Node, end?: Node, sequence?: number, descriptor?: string, selector?: string) {
+  public constructor(type: string, start: Node, end: Node | undefined, sequence: number, descriptor: string) {
     this.type = type;
     this.start = start;
     this.end = end;
     this.sequence = sequence;
     this.descriptor = descriptor;
-    this.selector = selector;
   }
 
   public initialize(): void {
   }
 
   public toRecord(): ComponentRecord {
-    const result = { type: this.type, sequence: this.sequence, descriptor: this.descriptor, selector: this.selector };
+    const result = { type: this.type, sequence: this.sequence, descriptor: this.descriptor };
     return result;
   }
 }
@@ -115,7 +111,6 @@ export function discoverComponents(document: Document): ComponentDescriptor[] {
       componentComment.end,
       componentComment.sequence,
       componentComment.descriptor,
-      componentComment.selector
     );
 
     discoveredComponents.push(entry);
@@ -127,9 +122,9 @@ export function discoverComponents(document: Document): ComponentDescriptor[] {
 
 interface ComponentComment {
   type: 'server';
-  sequence?: number;
-  descriptor?: string;
-  selector?: string;
+  sequence: number;
+  descriptor: string;
+  selector: string;
   start: Node;
   end?: Node;
   prerendered?: string;
@@ -154,10 +149,11 @@ function resolveComponentComments(node: Node): ComponentComment[] {
       }
     }
   }
+
   return result;
 }
 
-export const blazorCommentRegularExpression = /\W*Blazor:[^{]*(.*)$/;
+const blazorCommentRegularExpression = /\W*Blazor:[^{]*(.*)$/;
 
 function getComponentComment(commentNodeIterator: ComponentCommentIterator): ComponentComment | undefined {
   const candidateStart = commentNodeIterator.currentElement;
@@ -188,11 +184,12 @@ function createComponentComment(json: string, start: Node, iterator: ComponentCo
   if (type !== 'server') {
     throw new Error(`Invalid component type '${type}'.`);
   }
-  if (selector && descriptor) {
-    throw new Error("selector and descriptor can't be specified at the same time.");
+
+  if (descriptor) {
+    throw new Error('descriptor must be defined when using a descriptor.');
   }
 
-  if (descriptor && sequence === undefined) {
+  if (sequence === undefined) {
     throw new Error('sequence must be defined when using a descriptor.');
   }
 
@@ -214,6 +211,7 @@ function createComponentComment(json: string, start: Node, iterator: ComponentCo
     if (!end) {
       throw new Error(`Could not find an end component comment for '${start}'`);
     }
+
     return {
       type,
       selector,
@@ -226,12 +224,9 @@ function createComponentComment(json: string, start: Node, iterator: ComponentCo
   }
 }
 
-function getParsedSequence(sequence: string): [boolean, number?] {
-  try {
-    return [true, Number.parseInt(sequence)];
-  } catch (error) {
-    return [false, undefined];
-  }
+function getParsedSequence(sequence: string): [boolean, number] {
+  const result = Number.parseInt(sequence);
+  return [Number.isNaN(result), result];
 }
 
 function getComponentEndComment(prerenderedId: string, iterator: ComponentCommentIterator): ChildNode | undefined {
