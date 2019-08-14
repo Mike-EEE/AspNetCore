@@ -71,7 +71,7 @@
     <Compile Include="$(RepoRoot)src\Shared\Components\ComponentDescriptorInstance.cs" LinkBase="Descriptors" />
     <Compile Include="$(RepoRoot)src\Shared\Components\ComponentDescriptorSerializer.cs" LinkBase="Descriptors" />
     <Compile Include="$(RepoRoot)src\Shared\Components\ComponentDescriptorSerializer.Deserialize.cs" LinkBase="Descriptors" />
-    <Compile Include="$(RepoRoot)src\Shared\Components\ComponentRecord.cs" LinkBase="Descriptors" />
+    <Compile Include="$(RepoRoot)src\Shared\Components\ComponentMarker.cs" LinkBase="Descriptors" />
     <Compile Include="$(RepoRoot)src\Shared\Components\RootComponentTypeCache.cs" LinkBase="Descriptors" />
   </ItemGroup>
 
