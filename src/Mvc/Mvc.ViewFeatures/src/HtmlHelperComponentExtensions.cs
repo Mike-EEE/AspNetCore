@@ -102,7 +102,6 @@ namespace Microsoft.AspNetCore.Mvc.Rendering
             var currentInvocation = invocationSerializer.SerializeInvocation(
                 context,
                 type,
-                parametersCollection,
                 prerendered: true);
 
             var result = await prerenderer.PrerenderComponentAsync(
@@ -125,7 +124,7 @@ namespace Microsoft.AspNetCore.Mvc.Rendering
 
             var serviceProvider = context.RequestServices;
             var invocationSerializer = serviceProvider.GetRequiredService<ComponentDescriptorSerializer>();
-            var currentInvocation = invocationSerializer.SerializeInvocation(context, type, parametersCollection, prerendered:false);
+            var currentInvocation = invocationSerializer.SerializeInvocation(context, type, prerendered:false);
 
             return new ComponentHtmlContent(invocationSerializer.GetPreamble(currentInvocation));
         }

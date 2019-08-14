@@ -50,7 +50,7 @@ namespace Microsoft.AspNetCore.Components.Server.Circuits
         {
             if (!DescriptorSerializer.TryDeserializeComponentDescriptorCollection(serializedComponentRecords, out var components))
             {
-                throw new InvalidOperationException("Invalid component record collection.");
+                throw new InvalidOperationException("Invalid component marker collection.");
             }
 
             var scope = _scopeFactory.CreateScope();

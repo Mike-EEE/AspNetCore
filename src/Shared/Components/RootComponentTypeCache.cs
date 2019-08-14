@@ -1,40 +1,59 @@
+// Copyright (c) .NET Foundation. All rights reserved.
+// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
-using System.Text.Json;
+using System.Reflection;
 
 namespace Microsoft.AspNetCore.Components
 {
+    // A cache for root component types
     internal class RootComponentTypeCache
     {
-        public string RegisterRootComponent(Type type)
+        private readonly ConcurrentDictionary<Key, Type> _typeToKeyLookUp = new ConcurrentDictionary<Key, Type>();
+
+        public Type GetRootComponent(string assembly, string type)
         {
-            var key = JsonSerializer.Serialize(new Key(type.Assembly.GetName().Name, type.FullName));
-            return key;
+            var key = new Key(assembly, type);
+            if (_typeToKeyLookUp.TryGetValue(key, out var resolvedType))
+            {
+                return resolvedType;
+            }
+            else
+            {
+                return _typeToKeyLookUp.GetOrAdd(key, ResolveType, AppDomain.CurrentDomain.GetAssemblies());
+            }
         }
 
-        public Type GetRootComponent(string identifier)
+        private static Type ResolveType(Key key, Assembly[] assemblies)
         {
-            var key = JsonSerializer.Deserialize<Key>(identifier);
-            var assembly = AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(a => a.GetName().Name == key.Assembly);
+            var assembly = assemblies
+                .FirstOrDefault(a => string.Equals(a.GetName().Name, key.Assembly, StringComparison.Ordinal));
+
             if (assembly == null)
             {
                 return null;
             }
-            var type = assembly.GetType(key.Type, throwOnError: false, ignoreCase: false);
-            return type;
+
+            return assembly.GetType(key.Type, throwOnError: false, ignoreCase: false);
         }
 
-        private struct Key
+        private struct Key : IEquatable<Key>
         {
-            public Key(string assembly, string type) : this()
-            {
-                Assembly = assembly;
-                Type = type;
-            }
+            public Key(string assembly, string type) =>
+                (Assembly, Type) = (assembly, type);
 
             public string Assembly { get; set; }
+
             public string Type { get; set; }
+
+            public override bool Equals(object obj) => Equals((Key)obj);
+
+            public bool Equals(Key other) => string.Equals(Assembly, other.Assembly, StringComparison.Ordinal) &&
+                string.Equals(Type, other.Type, StringComparison.Ordinal);
+
+            public override int GetHashCode() => HashCode.Combine(Assembly, Type);
         }
     }
 }

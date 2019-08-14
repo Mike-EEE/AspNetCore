@@ -3,13 +3,28 @@
 
 namespace Microsoft.AspNetCore.Components
 {
+    // The DTO that we data-protect and include into any
+    // generated component marker and that allows the client
+    // to bootstrap a blazor server-side application.
     internal struct ComponentDescriptorInstance
     {
-        public ComponentDescriptorInstance(int sequence, string rootComponent, string invocationId) =>
-            (Sequence, RootComponent, InvocationId) = (sequence, rootComponent, invocationId);
+        public ComponentDescriptorInstance(
+            int sequence,
+            string assemblyName,
+            string typeName,
+            string invocationId) =>
+            (Sequence, AssemblyName, TypeName, InvocationId) = (sequence, assemblyName, typeName, invocationId);
 
+        // The order in which this component was rendered
         public int Sequence { get; set; }
-        public string RootComponent { get; set; }
+
+        // The assembly name for the rendered component.
+        public string AssemblyName { get; set; }
+
+        // The type name of the component.
+        public string TypeName { get; set; }
+
+        // An id that uniquely identifies all components generated as part of a single HTTP response.
         public string InvocationId { get; set; }
     }
 }
