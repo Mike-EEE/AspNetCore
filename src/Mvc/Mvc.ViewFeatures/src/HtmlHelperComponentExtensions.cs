@@ -90,6 +90,11 @@ namespace Microsoft.AspNetCore.Mvc.Rendering
 
         private static async Task<IHtmlContent> PrerenderedBlazorComponentAsync(HttpContext context, Type type, ParameterView parametersCollection)
         {
+            if (parametersCollection.GetEnumerator().MoveNext())
+            {
+                throw new InvalidOperationException("Prerendering server components with parameters is not supported.");
+            }
+
             var serviceProvider = context.RequestServices;
             var prerenderer = serviceProvider.GetRequiredService<StaticComponentRenderer>();
             var invocationSerializer = serviceProvider.GetRequiredService<ComponentDescriptorSerializer>();
@@ -113,6 +118,11 @@ namespace Microsoft.AspNetCore.Mvc.Rendering
 
         private static IHtmlContent NonPrerenderedBlazorComponent(HttpContext context, Type type, ParameterView parametersCollection)
         {
+            if (parametersCollection.GetEnumerator().MoveNext())
+            {
+                throw new InvalidOperationException("Server components with parameters are not supported.");
+            }
+
             var serviceProvider = context.RequestServices;
             var invocationSerializer = serviceProvider.GetRequiredService<ComponentDescriptorSerializer>();
             var currentInvocation = invocationSerializer.SerializeInvocation(context, type, parametersCollection, prerendered:false);
