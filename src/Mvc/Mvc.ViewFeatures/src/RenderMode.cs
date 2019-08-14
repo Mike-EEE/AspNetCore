@@ -7,27 +7,26 @@ namespace Microsoft.AspNetCore.Mvc.Rendering
     /// Describes the render mode of the component.
     /// </summary>
     /// <remarks>
-    /// The rendering mode determines how the component gets rendered on the page. This enum configures whether the component
+    /// The rendering mode determines how the component gets rendered on the page. It configures whether the component
     /// is prerendered into the page or not and whether it simply renders static HTML on the page or if it includes the necessary
-    /// information for to bootstrap a Blazor application from the user agent.
+    /// information to bootstrap a Blazor application from the user agent.
     /// </remarks>
     public enum RenderMode
     {
         /// <summary>
-        /// Indicates that we are rendering a server-side component (Blazor) and that we need
-        /// to emit the appropriate markers for client-side blazor to start a circuit and render the
-        /// component from JavaScript.
+        /// Renders the component into static HTML.
         /// </summary>
-        Server = 0b00000_01_0,
+        Html = 1
 
         /// <summary>
-        /// An alias for RenderMode.Server | RenderMode.Prerendered
+        /// Renders a marker for a Blazor server-side application.
         /// </summary>
-        ServerPrerendered = 0b00000_01_1,
+        Server = 2,
 
         /// <summary>
-        /// An alias for RenderMode.Static | RenderMode.Prerendered
+        /// Renders the component into static HTML and includes a marker for a Blazor server-side application.
         /// </summary>
-        Html = 0b00000_00_1
+        ServerPrerendered = 3,
+
     }
 }
