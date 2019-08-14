@@ -16,7 +16,7 @@ namespace Microsoft.AspNetCore.Mvc.Rendering
         /// <summary>
         /// Renders the component into static HTML.
         /// </summary>
-        Html = 1
+        Html = 1,
 
         /// <summary>
         /// Renders a marker for a Blazor server-side application.

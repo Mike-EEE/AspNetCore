@@ -49,14 +49,7 @@ export class CircuitDescriptor {
     if (sequence !== undefined) {
       return toLogicalRootCommentElement(this.components[sequence].start as Comment, this.components[sequence].end as Comment);
     } else {
-      for (let i = 0; i < this.components.length; i++) {
-        const component = this.components[i];
-        if (component.selector === sequenceOrSelector) {
-          return toLogicalRootCommentElement(component.start as Comment, component.end as Comment);
-        }
-      }
-
-      throw new Error(`Could not find descriptor with identifier '${sequenceOrSelector}'.`);
+      throw new Error(`Invalid sequence number '${sequenceOrSelector}'.`);
     }
 
     function getSequence(sequenceOrSelector: string): number | undefined {
@@ -89,9 +82,6 @@ export class ComponentDescriptor {
     this.end = end;
     this.sequence = sequence;
     this.descriptor = descriptor;
-  }
-
-  public initialize(): void {
   }
 
   public toRecord(): ComponentRecord {
