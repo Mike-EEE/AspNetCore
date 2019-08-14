@@ -39,15 +39,18 @@ namespace Microsoft.AspNetCore.Components.Server
         private static readonly object CircuitKey = new object();
         private readonly DefaultCircuitFactory _circuitFactory;
         private readonly CircuitRegistry _circuitRegistry;
+        private readonly CircuitOptions _options;
         private readonly ILogger _logger;
 
         public ComponentHub(
             DefaultCircuitFactory circuitFactory,
             CircuitRegistry circuitRegistry,
+            IOptions<CircuitOptions> options,
             ILogger<ComponentHub> logger)
         {
             _circuitFactory = circuitFactory;
             _circuitRegistry = circuitRegistry;
+            _options = options.Value;
             _logger = logger;
         }
 
@@ -125,7 +128,7 @@ namespace Microsoft.AspNetCore.Components.Server
                 // If the circuit fails to initialize synchronously we can notify the client immediately
                 // and shut down the connection.
                 Log.CircuitInitializationFailed(_logger, ex);
-                await NotifyClientError(Clients.Caller, "The circuit failed to initialize.");
+                await NotifyClientError(Clients.Caller, GetClientErrorMessage(ex, "The circuit failed to initialize."));
                 Context.Abort();
                 return null;
             }
@@ -247,6 +250,19 @@ namespace Microsoft.AspNetCore.Components.Server
         }
 
         private static Task NotifyClientError(IClientProxy client, string error) => client.SendAsync("JS.Error", error);
+
+        private string GetClientErrorMessage(Exception exception, string additionalInformation = null)
+        {
+            if (_options.DetailedErrors)
+            {
+                return exception.ToString();
+            }
+            else
+            {
+                return $"There was an unhandled exception on the current circuit, so this circuit will be terminated. For more details turn on " +
+                    $"detailed exceptions in '{typeof(CircuitOptions).Name}.{nameof(CircuitOptions.DetailedErrors)}'. {additionalInformation}";
+            }
+        }
 
         private static class Log
         {
