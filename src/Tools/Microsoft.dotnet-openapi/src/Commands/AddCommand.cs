@@ -1,8 +1,8 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
-using System.Net.Http;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Openapi.Tools;
 
 namespace Microsoft.DotNet.OpenApi.Commands
 {
@@ -10,7 +10,7 @@ namespace Microsoft.DotNet.OpenApi.Commands
     {
         private const string CommandName = "add";
 
-        public AddCommand(Application parent, HttpClient httpClient)
+        public AddCommand(Application parent, IHttpClientWrapper httpClient)
             : base(parent, CommandName, httpClient)
         {
             Commands.Add(new AddFileCommand(this, httpClient));

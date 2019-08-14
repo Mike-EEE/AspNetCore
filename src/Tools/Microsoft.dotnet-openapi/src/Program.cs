@@ -4,7 +4,7 @@
 using System;
 using System.IO;
 using System.Net.Http;
-using System.Threading.Tasks;
+using Microsoft.DotNet.Openapi.Tools;
 
 namespace Microsoft.DotNet.OpenApi
 {
@@ -19,10 +19,9 @@ namespace Microsoft.DotNet.OpenApi
 
             try
             {
-                using var httpClient = new HttpClient();
+                using var httpClient = new HttpClientWrapper(new HttpClient());
                 var application = new Application(
                     Directory.GetCurrentDirectory(),
-                    DownloadAsync,
                     httpClient,
                     outputWriter,
                     errorWriter);
@@ -49,12 +48,6 @@ namespace Microsoft.DotNet.OpenApi
             }
 
             return 1;
-        }
-
-        public static async Task<Stream> DownloadAsync(string url)
-        {
-            using var client = new HttpClient();
-            return await client.GetStreamAsync(url);
         }
     }
 }

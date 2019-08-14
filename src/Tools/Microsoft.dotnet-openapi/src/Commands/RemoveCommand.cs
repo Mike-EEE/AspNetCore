@@ -3,9 +3,9 @@
 
 using System;
 using System.IO;
-using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.Build.Evaluation;
+using Microsoft.DotNet.Openapi.Tools;
 using Microsoft.Extensions.CommandLineUtils;
 using Microsoft.Extensions.Tools.Internal;
 
@@ -17,7 +17,7 @@ namespace Microsoft.DotNet.OpenApi.Commands
 
         private const string SourceArgName = "soruce";
 
-        public RemoveCommand(Application parent, HttpClient httpClient) : base(parent, CommandName, httpClient)
+        public RemoveCommand(Application parent, IHttpClientWrapper httpClient) : base(parent, CommandName, httpClient)
         {
             _sourceProjectArg = Argument(SourceArgName, $"The OpenAPI reference to remove. Must represent a reference which is already in this project", multipleValues: true);
         }

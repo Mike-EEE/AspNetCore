@@ -3,10 +3,10 @@
 
 using System;
 using System.IO;
-using System.Net.Http;
 using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.Build.Locator;
+using Microsoft.DotNet.Openapi.Tools;
 using Microsoft.DotNet.OpenApi.Commands;
 using Microsoft.Extensions.CommandLineUtils;
 
@@ -21,12 +21,10 @@ namespace Microsoft.DotNet.OpenApi
 
         public Application(
             string workingDirectory,
-            Func<string, Task<Stream>> downloadProvider,
-            HttpClient httpClient,
+            IHttpClientWrapper httpClient,
             TextWriter output = null,
             TextWriter error = null)
         {
-            DownloadProvider = downloadProvider;
             Out = output ?? Out;
             Error = error ?? Error;
 
@@ -49,8 +47,6 @@ namespace Microsoft.DotNet.OpenApi
             Commands.Add(new RemoveCommand(this, httpClient));
             Commands.Add(new RefreshCommand(this, httpClient));
         }
-
-        public Func<string, Task<Stream>> DownloadProvider { get; }
 
         public string WorkingDirectory { get; }
 

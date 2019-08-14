@@ -2,8 +2,8 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System.IO;
-using System.Net.Http;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Openapi.Tools;
 using Microsoft.Extensions.CommandLineUtils;
 using Microsoft.Extensions.Tools.Internal;
 
@@ -18,7 +18,7 @@ namespace Microsoft.DotNet.OpenApi.Commands
         private const string OutputFileName = "--output-file";
         private const string SourceUrlArgName = "source-URL";
 
-        public AddURLCommand(AddCommand parent, HttpClient httpClient)
+        public AddURLCommand(AddCommand parent, IHttpClientWrapper httpClient)
             : base(parent, CommandName, httpClient)
         {
             _codeGeneratorOption = Option("-c|--code-generator", "The code generator to use. Defaults to 'NSwagCSharp'.", CommandOptionType.SingleValue);
@@ -55,7 +55,7 @@ namespace Microsoft.DotNet.OpenApi.Commands
                 // We have to download the file from that URL, save it to a local file, then create a OpenApiReference
                 await DownloadToFileAsync(sourceFile, destination, overwrite: false);
 
-                AddServiceReference(OpenApiReference, projectFilePath, outputFile, sourceFile);
+                AddServiceReference(OpenApiReference, projectFilePath, outputFile, codeGenerator, sourceFile);
             }
             else
             {

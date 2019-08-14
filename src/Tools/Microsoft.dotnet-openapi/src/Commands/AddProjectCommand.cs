@@ -2,8 +2,8 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
-using System.Net.Http;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Openapi.Tools;
 using Microsoft.Extensions.CommandLineUtils;
 using Microsoft.Extensions.Tools.Internal;
 
@@ -15,7 +15,7 @@ namespace Microsoft.DotNet.OpenApi.Commands
 
         private const string SourceProjectArgName = "source-project";
 
-        public AddProjectCommand(BaseCommand parent, HttpClient httpClient)
+        public AddProjectCommand(BaseCommand parent, IHttpClientWrapper httpClient)
             : base(parent, CommandName, httpClient)
         {
             _codeGeneratorOption = Option("-c|--code-generator", "The code generator to use. Defaults to 'NSwagCSharp'.", CommandOptionType.SingleValue);
@@ -35,7 +35,7 @@ namespace Microsoft.DotNet.OpenApi.Commands
             {
                 await EnsurePackagesInProjectAsync(projectFilePath, codeGenerator);
 
-                AddServiceReference(OpenApiProjectReference, projectFilePath, sourceFile);
+                AddServiceReference(OpenApiProjectReference, projectFilePath, sourceFile, codeGenerator);
             }
 
             return 0;

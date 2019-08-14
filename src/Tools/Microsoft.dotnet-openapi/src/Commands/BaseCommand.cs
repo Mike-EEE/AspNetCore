@@ -6,12 +6,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Build.Evaluation;
+using Microsoft.DotNet.Openapi.Tools;
+using Microsoft.DotNet.Openapi.Tools.Internal;
 using Microsoft.Extensions.CommandLineUtils;
 
 namespace Microsoft.DotNet.OpenApi.Commands
@@ -20,15 +21,17 @@ namespace Microsoft.DotNet.OpenApi.Commands
     {
         protected string WorkingDirectory;
 
-        private readonly HttpClient _httpClient;
+        protected readonly IHttpClientWrapper _httpClient;
 
         public const string OpenApiReference = "OpenApiReference";
         public const string OpenApiProjectReference = "OpenApiProjectReference";
         protected const string SourceUrlAttrName = "SourceUrl";
 
+        private const string CodeGeneratorAttrName = "CodeGenerator";
+
         internal const string PackageVersionUrl = "https://go.microsoft.com/fwlink/?linkid=2099561";
 
-        public BaseCommand(CommandLineApplication parent, string name, HttpClient httpClient)
+        public BaseCommand(CommandLineApplication parent, string name, IHttpClientWrapper httpClient)
         {
             Parent = parent;
             Name = name;
@@ -129,6 +132,7 @@ namespace Microsoft.DotNet.OpenApi.Commands
             string tagName,
             FileInfo projectFile,
             string sourceFile,
+            CodeGenerator codeGenerator,
             string sourceUrl = null)
         {
             var project = LoadProject(projectFile);
@@ -159,6 +163,8 @@ namespace Microsoft.DotNet.OpenApi.Commands
                     metadata[SourceUrlAttrName] = sourceUrl;
                 }
 
+                metadata[CodeGeneratorAttrName] = codeGenerator.ToString();
+
                 project.AddElementWithAttributes(tagName, sourceFile, metadata);
             }
             else
@@ -180,7 +186,7 @@ namespace Microsoft.DotNet.OpenApi.Commands
                 application = (Application)Parent.Parent;
             }
 
-            using var content = await application.DownloadProvider(url);
+            using var content = await _httpClient.GetStreamAsync(url);
             await WriteToFileAsync(content, destinationPath, overwrite);
         }
 
@@ -204,7 +210,7 @@ namespace Microsoft.DotNet.OpenApi.Commands
             if (codeGeneratorOption.HasValue())
             {
                 var value = codeGeneratorOption.Value();
-                if (!Enum.TryParse<CodeGenerator>(value, out CodeGenerator _))
+                if (!Enum.TryParse(value, out CodeGenerator _))
                 {
                     throw new ArgumentException($"Invalid value '{value}' given as code generator.");
                 }
@@ -213,9 +219,14 @@ namespace Microsoft.DotNet.OpenApi.Commands
 
         internal async Task EnsurePackagesInProjectAsync(FileInfo projectFile, CodeGenerator codeGenerator)
         {
-            var packages = await ResolvePackageVersionsAsync() ?? GetServicePackages(codeGenerator);
-            foreach (var (packageId, version) in packages)
+            var urlPackages = await LoadPackageVersionsFromURLAsync();
+            var attributePackages = GetServicePackages(codeGenerator);
+
+            foreach (var kvp in attributePackages)
             {
+                var packageId = kvp.Key;
+                var version = urlPackages.ContainsKey(packageId) ? urlPackages[packageId] : kvp.Value;
+
                 var args = new[] {
                     "add",
                     "package",
@@ -264,7 +275,7 @@ namespace Microsoft.DotNet.OpenApi.Commands
                 : Path.GetFullPath(path, WorkingDirectory);
         }
 
-        private async Task<IDictionary<string, string>> ResolvePackageVersionsAsync()
+        private async Task<IDictionary<string, string>> LoadPackageVersionsFromURLAsync()
         {
             /* Example Json content
              {
@@ -305,18 +316,15 @@ namespace Microsoft.DotNet.OpenApi.Commands
         private static IDictionary<string, string> GetServicePackages(CodeGenerator type)
         {
             var name = Enum.GetName(typeof(CodeGenerator), type);
-            var attributes = typeof(Program).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>();
-            var attribute = attributes.Single(a => string.Equals(a.Key, name, StringComparison.OrdinalIgnoreCase));
+            var attributes = typeof(Program).Assembly.GetCustomAttributes<OpenApiDependencyAttribute>();
 
-            var packages = attribute?.Value?.Split(';', StringSplitOptions.RemoveEmptyEntries);
+            var packages = attributes.Where(a => a.CodeGenerators.Contains(type));
             var result = new Dictionary<string, string>();
             if (packages != null)
             {
                 foreach (var package in packages)
                 {
-                    var tmp = package.Split(':', StringSplitOptions.RemoveEmptyEntries);
-                    Debug.Assert(tmp.Length == 2);
-                    result[tmp[0]] = tmp[1];
+                    result[package.Name] = package.Version;
                 }
             }
 

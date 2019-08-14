@@ -1,7 +1,6 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
-using System;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -35,7 +34,7 @@ namespace Microsoft.DotNet.OpenApi.Add.Tests
                 var content = await reader.ReadToEndAsync();
                 Assert.Contains("<PackageReference Include=\"NSwag.ApiDescription.Client\" Version=\"", content);
                 Assert.Contains(
-    $@"<OpenApiReference Include=""{expectedJsonName}"" SourceUrl=""{FakeOpenApiUrl}"" />", content);
+    $@"<OpenApiReference Include=""{expectedJsonName}"" SourceUrl=""{FakeOpenApiUrl}"" CodeGenerator=""NSwagCSharp"" />", content);
             }
 
             var jsonFile = Path.Combine(_tempDir.Root, expectedJsonName);
@@ -48,6 +47,38 @@ namespace Microsoft.DotNet.OpenApi.Add.Tests
             }
         }
 
+        [Fact]
+        public async Task OpenApi_Add_Url_NSwagTypeScript()
+        {
+            var project = CreateBasicProject(withOpenApi: false);
+
+            var app = GetApplication();
+            var run = app.Execute(new[] { "add", "url", FakeOpenApiUrl, "--code-generator", "NSwagTypeScript" });
+
+            Assert.True(string.IsNullOrEmpty(_error.ToString()), $"Threw error: {_error.ToString()}");
+            Assert.Equal(0, run);
+
+            var expectedJsonName = Path.Combine("openapi", "openapi.json");
+
+            // csproj contents
+            using (var csprojStream = new FileInfo(project.Project.Path).OpenRead())
+            using (var reader = new StreamReader(csprojStream))
+            {
+                var content = await reader.ReadToEndAsync();
+                Assert.Contains("<PackageReference Include=\"NSwag.ApiDescription.Client\" Version=\"", content);
+                Assert.Contains(
+    $@"<OpenApiReference Include=""{expectedJsonName}"" SourceUrl=""{FakeOpenApiUrl}"" CodeGenerator=""NSwagTypeScript"" />", content);
+            }
+
+            var resultFile = Path.Combine(_tempDir.Root, expectedJsonName);
+            Assert.True(File.Exists(resultFile));
+            using (var jsonStream = new FileInfo(resultFile).OpenRead())
+            using (var reader = new StreamReader(jsonStream))
+            {
+                var content = await reader.ReadToEndAsync();
+                Assert.Equal(Content, content);
+            }
+        }
 
         [Fact]
         public async Task OpenApi_Add_Url_OutputFile()
@@ -69,7 +100,7 @@ namespace Microsoft.DotNet.OpenApi.Add.Tests
                 var content = await reader.ReadToEndAsync();
                 Assert.Contains("<PackageReference Include=\"NSwag.ApiDescription.Client\" Version=\"", content);
                 Assert.Contains(
-    $@"<OpenApiReference Include=""{expectedJsonName}"" SourceUrl=""{FakeOpenApiUrl}"" />", content);
+    $@"<OpenApiReference Include=""{expectedJsonName}"" SourceUrl=""{FakeOpenApiUrl}"" CodeGenerator=""NSwagCSharp"" />", content);
             }
 
             var resultFile = Path.Combine(_tempDir.Root, expectedJsonName);
@@ -101,15 +132,13 @@ namespace Microsoft.DotNet.OpenApi.Add.Tests
 
             // csproj contents
             var csproj = new FileInfo(project.Project.Path);
-            using (var csprojStream = csproj.OpenRead())
-            using (var reader = new StreamReader(csprojStream))
-            {
-                var content = reader.ReadToEnd();
-                var escapedPkgRef = Regex.Escape("<PackageReference Include=\"NSwag.ApiDescription.Client\" Version=\"");
-                Assert.Single(Regex.Matches(content, escapedPkgRef));
-                var escapedApiRef = Regex.Escape($"SourceUrl=\"{FakeOpenApiUrl}\"");
-                Assert.Single(Regex.Matches(content, escapedApiRef));
-            }
+            using var csprojStream = csproj.OpenRead();
+            using var reader = new StreamReader(csprojStream);
+            var content = reader.ReadToEnd();
+            var escapedPkgRef = Regex.Escape("<PackageReference Include=\"NSwag.ApiDescription.Client\" Version=\"");
+            Assert.Single(Regex.Matches(content, escapedPkgRef));
+            var escapedApiRef = Regex.Escape($"SourceUrl=\"{FakeOpenApiUrl}\"");
+            Assert.Single(Regex.Matches(content, escapedApiRef));
         }
     }
 }

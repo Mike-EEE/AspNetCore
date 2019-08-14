@@ -1,7 +1,6 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
-using System;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.DotNet.OpenApi.Tests;
@@ -72,29 +71,26 @@ namespace Microsoft.DotNet.OpenApi.Remove.Tests
                 .WithContentFile("Startup.cs")
                 .Create();
 
-            var url = "https://contoso.com/swagger.json";
             var add = GetApplication();
-            var run = add.Execute(new[] { "add", "url", url });
+            var run = add.Execute(new[] { "add", "url", FakeOpenApiUrl });
 
             Assert.True(string.IsNullOrEmpty(_error.ToString()), $"Threw error: {_error.ToString()}");
             Assert.Equal(0, run);
 
             var remove = GetApplication();
-            var removeRun = remove.Execute(new[] { "remove", url });
+            var removeRun = remove.Execute(new[] { "remove", FakeOpenApiUrl });
 
             Assert.True(string.IsNullOrEmpty(_error.ToString()), $"Threw error: {_error.ToString()}");
             Assert.Equal(0, removeRun);
 
             // csproj contents
             var csproj = new FileInfo(Path.Join(_tempDir.Root, "testproj.csproj"));
-            using (var csprojStream = csproj.OpenRead())
-            using (var reader = new StreamReader(csprojStream))
-            {
-                var content = await reader.ReadToEndAsync();
-                // Don't remove the package reference, they might have taken other dependencies on it
-                Assert.Contains("<PackageReference Include=\"NSwag.ApiDescription.Client\" Version=\"", content);
-                Assert.DoesNotContain($"<OpenApiReference", content);
-            }
+            using var csprojStream = csproj.OpenRead();
+            using var reader = new StreamReader(csprojStream);
+            var content = await reader.ReadToEndAsync();
+            // Don't remove the package reference, they might have taken other dependencies on it
+            Assert.Contains("<PackageReference Include=\"NSwag.ApiDescription.Client\" Version=\"", content);
+            Assert.DoesNotContain($"<OpenApiReference", content);
         }
 
         [Fact(Skip = "https://github.com/aspnet/AspNetCore/issues/12738")]
@@ -107,45 +103,43 @@ namespace Microsoft.DotNet.OpenApi.Remove.Tests
                .WithContentFile("Startup.cs")
                .Create();
 
-            using (var refProj = new TemporaryDirectory())
+            using var refProj = new TemporaryDirectory();
+            var refProjName = "refProj";
+            refProj
+                .WithCSharpProject(refProjName)
+                .WithTargetFrameworks("netcoreapp3.0")
+                .Dir()
+                .Create();
+
+            var app = GetApplication();
+            var refProjFile = Path.Join(refProj.Root, $"{refProjName}.csproj");
+            var run = app.Execute(new[] { "add", "project", refProjFile });
+
+            Assert.True(string.IsNullOrEmpty(_error.ToString()), $"Threw error: {_error.ToString()}");
+            Assert.Equal(0, run);
+
+            // csproj contents
+            using (var csprojStream = new FileInfo(Path.Join(_tempDir.Root, "testproj.csproj")).OpenRead())
+            using (var reader = new StreamReader(csprojStream))
             {
-                var refProjName = "refProj";
-                refProj
-                    .WithCSharpProject(refProjName)
-                    .WithTargetFrameworks("netcoreapp3.0")
-                    .Dir()
-                    .Create();
+                var content = await reader.ReadToEndAsync();
+                Assert.Contains("<PackageReference Include=\"NSwag.ApiDescription.Client\" Version=\"", content);
+                Assert.Contains($"<OpenApiProjectReference Include=\"{refProjFile}\"", content);
+            }
 
-                var app = GetApplication();
-                var refProjFile = Path.Join(refProj.Root, $"{refProjName}.csproj");
-                var run = app.Execute(new[] { "add", "project", refProjFile });
+            var remove = GetApplication();
+            run = app.Execute(new[] { "remove", refProjFile });
 
-                Assert.True(string.IsNullOrEmpty(_error.ToString()), $"Threw error: {_error.ToString()}");
-                Assert.Equal(0, run);
+            Assert.True(string.IsNullOrEmpty(_error.ToString()), $"Threw error: {_error.ToString()}");
+            Assert.Equal(0, run);
 
-                // csproj contents
-                using (var csprojStream = new FileInfo(Path.Join(_tempDir.Root, "testproj.csproj")).OpenRead())
-                using (var reader = new StreamReader(csprojStream))
-                {
-                    var content = await reader.ReadToEndAsync();
-                    Assert.Contains("<PackageReference Include=\"NSwag.ApiDescription.Client\" Version=\"", content);
-                    Assert.Contains($"<OpenApiProjectReference Include=\"{refProjFile}\"", content);
-                }
-
-                var remove = GetApplication();
-                run = app.Execute(new[] { "remove", refProjFile });
-
-                Assert.True(string.IsNullOrEmpty(_error.ToString()), $"Threw error: {_error.ToString()}");
-                Assert.Equal(0, run);
-
-                // csproj contents
-                using (var csprojStream = new FileInfo(Path.Join(_tempDir.Root, "testproj.csproj")).OpenRead())
-                using (var reader = new StreamReader(csprojStream))
-                {
-                    var content = await reader.ReadToEndAsync();
-                    Assert.Contains("<PackageReference Include=\"NSwag.ApiDescription.Client\" Version=\"", content);
-                    Assert.DoesNotContain($"<OpenApiProjectReference Include=\"{refProjFile}\"", content);
-                }
+            // csproj contents
+            using (var csprojStream = new FileInfo(Path.Join(_tempDir.Root, "testproj.csproj")).OpenRead())
+            using (var reader = new StreamReader(csprojStream))
+            {
+                var content = await reader.ReadToEndAsync();
+                Assert.Contains("<PackageReference Include=\"NSwag.ApiDescription.Client\" Version=\"", content);
+                Assert.DoesNotContain($"<OpenApiProjectReference Include=\"{refProjFile}\"", content);
             }
         }
 

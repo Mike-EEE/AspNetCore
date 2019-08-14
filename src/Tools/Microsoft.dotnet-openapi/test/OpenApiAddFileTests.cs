@@ -96,7 +96,7 @@ namespace Microsoft.DotNet.OpenApi.Add.Tests
         }
 
         [Fact]
-        public void OpenApi_Add__File_EquivilentPaths()
+        public void OpenApi_Add_File_EquivilentPaths()
         {
             var project = CreateBasicProject(withOpenApi: true);
             var nswagJsonFile = project.NSwagJsonFile;
@@ -140,21 +140,20 @@ namespace Microsoft.DotNet.OpenApi.Add.Tests
             using (var reader = new StreamReader(csprojStream))
             {
                 var content = await reader.ReadToEndAsync();
-                Assert.Contains("<PackageReference Include=\"NSwag.ApiDescription.Client\" CodeGenerator=\"NSwagTypeScript\" Version=\"", content);
-                Assert.Contains($"<OpenApiReference Include=\"{nswagJsonFile}\"", content);
+                Assert.Contains("<PackageReference Include=\"NSwag.ApiDescription.Client\" Version=\"", content);
+                Assert.Contains($"<OpenApiReference Include=\"{nswagJsonFile}\" CodeGenerator=\"NSwagTypeScript\" />", content);
             }
 
             // Build project and make sure it compiles
-            var buildProc = ProcessEx.Run(_outputHelper, _tempDir.Root, "dotnet", "build");
+            using var buildProc = ProcessEx.Run(_outputHelper, _tempDir.Root, "dotnet", "build");
             await buildProc.Exited;
             Assert.True(buildProc.ExitCode == 0, $"Build failed: {buildProc.Output}");
 
+
             // Run project and make sure it doesn't crash
-            using (var runProc = ProcessEx.Run(_outputHelper, _tempDir.Root, "dotnet", "run"))
-            {
-                Thread.Sleep(100);
-                Assert.False(runProc.HasExited, $"Run failed with: {runProc.Output}");
-            }
+            using var runProc = ProcessEx.Run(_outputHelper, _tempDir.Root, "dotnet", "run");
+            Thread.Sleep(100);
+            Assert.False(runProc.HasExited, $"Run failed with: {runProc.Output}");
         }
 
         [Fact]
@@ -185,11 +184,9 @@ namespace Microsoft.DotNet.OpenApi.Add.Tests
             Assert.True(buildProc.ExitCode == 0, $"Build failed: {buildProc.Output}");
 
             // Run project and make sure it doesn't crash
-            using (var runProc = ProcessEx.Run(_outputHelper, _tempDir.Root, "dotnet", "run"))
-            {
-                Thread.Sleep(100);
-                Assert.False(runProc.HasExited, $"Run failed with: {runProc.Output}");
-            }
+            using var runProc = ProcessEx.Run(_outputHelper, _tempDir.Root, "dotnet", "run");
+            Thread.Sleep(100);
+            Assert.False(runProc.HasExited, $"Run failed with: {runProc.Output}");
         }
 
         [Fact]
@@ -206,13 +203,11 @@ namespace Microsoft.DotNet.OpenApi.Add.Tests
 
             // csproj contents
             var csproj = new FileInfo(project.Project.Path);
-            using (var csprojStream = csproj.OpenRead())
-            using (var reader = new StreamReader(csprojStream))
-            {
-                var content = await reader.ReadToEndAsync();
-                Assert.Contains("<PackageReference Include=\"NSwag.ApiDescription.Client\" Version=\"", content);
-                Assert.Contains($"<OpenApiReference Include=\"{nswagJsonFIle}\"", content);
-            }
+            using var csprojStream = csproj.OpenRead();
+            using var reader = new StreamReader(csprojStream);
+            var content = await reader.ReadToEndAsync();
+            Assert.Contains("<PackageReference Include=\"NSwag.ApiDescription.Client\" Version=\"", content);
+            Assert.Contains($"<OpenApiReference Include=\"{nswagJsonFIle}\"", content);
         }
 
         [Fact]
@@ -235,15 +230,13 @@ namespace Microsoft.DotNet.OpenApi.Add.Tests
 
             // csproj contents
             var csproj = new FileInfo(project.Project.Path);
-            using (var csprojStream = csproj.OpenRead())
-            using (var reader = new StreamReader(csprojStream))
-            {
-                var content = await reader.ReadToEndAsync();
-                var escapedPkgRef = Regex.Escape("<PackageReference Include=\"NSwag.ApiDescription.Client\" Version=\"");
-                Assert.Single(Regex.Matches(content, escapedPkgRef));
-                var escapedApiRef = Regex.Escape($"<OpenApiReference Include=\"{nswagJsonFile}\"");
-                Assert.Single(Regex.Matches(content, escapedApiRef));
-            }
+            using var csprojStream = csproj.OpenRead();
+            using var reader = new StreamReader(csprojStream);
+            var content = await reader.ReadToEndAsync();
+            var escapedPkgRef = Regex.Escape("<PackageReference Include=\"NSwag.ApiDescription.Client\" Version=\"");
+            Assert.Single(Regex.Matches(content, escapedPkgRef));
+            var escapedApiRef = Regex.Escape($"<OpenApiReference Include=\"{nswagJsonFile}\"");
+            Assert.Single(Regex.Matches(content, escapedApiRef));
         }
     }
 }
