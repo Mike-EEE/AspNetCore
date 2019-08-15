@@ -30,7 +30,7 @@ namespace Microsoft.DotNet.OpenApi
 
             WorkingDirectory = workingDirectory;
 
-            Name = "microsoft.openapi";
+            Name = "openapi";
             FullName = "OpenApi reference management tool";
             Description = "OpenApi reference management operations.";
             ShortVersionGetter = GetInformationalVersion;
@@ -58,7 +58,10 @@ namespace Microsoft.DotNet.OpenApi
             }
             catch (AggregateException ex) when (ex.InnerException != null)
             {
-                Error.WriteLine(ex);
+                foreach (var innerException in ex.InnerExceptions)
+                {
+                    Error.WriteLine(ex.InnerException.Message);
+                }
                 return 1;
             }
 

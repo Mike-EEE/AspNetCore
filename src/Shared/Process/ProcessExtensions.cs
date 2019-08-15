@@ -72,7 +72,7 @@ namespace Microsoft.Extensions.Internal
                     }
                 }
             }
-            catch(Win32Exception ex) when (ex.Message.Contains("No such file or directory"))
+            catch (Win32Exception ex) when (ex.Message.Contains("No such file or directory"))
             {
                 // This probably means that pgrep isn't installed. Nothing to be done?
             }
@@ -80,11 +80,18 @@ namespace Microsoft.Extensions.Internal
 
         private static void KillProcessUnix(int processId, TimeSpan timeout)
         {
-            RunProcessAndWaitForExit(
-                "kill",
-                $"-TERM {processId}",
-                timeout,
-                out var stdout);
+            try
+            {
+                RunProcessAndWaitForExit(
+                    "kill",
+                    $"-TERM {processId}",
+                    timeout,
+                    out var stdout);
+            }
+            catch (Win32Exception ex) when (ex.Message.Contains("No such file or directory"))
+            {
+                // This probably means that the process is already dead
+            }
         }
 
         private static void RunProcessAndWaitForExit(string fileName, string arguments, TimeSpan timeout, out string stdout)

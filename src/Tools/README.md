@@ -17,7 +17,7 @@ The folder contains command-line tools for ASP.NET Core. The following tools are
 
 The following tools are produced by us but not bundled in the .NET Core CLI. They must be aquired independently.
 
-- [dotnet-microsoft.openapi](dotnet-microsoft.openapi/README.md)
+- [Microsoft.dotnet-openapi](Microsoft.dotnet-openapi/README.md)
 
 ## Usage
 
@@ -28,7 +28,7 @@ dotnet watch
 dotnet user-secrets
 dotnet sql-cache
 dotnet dev-certs
-dotnet microsoft.openapi
+dotnet openapi
 ```
 
 Add `--help` to see more details. For example,

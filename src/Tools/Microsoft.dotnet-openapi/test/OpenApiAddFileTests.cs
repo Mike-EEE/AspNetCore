@@ -26,7 +26,7 @@ namespace Microsoft.DotNet.OpenApi.Add.Tests
             Assert.True(string.IsNullOrEmpty(_error.ToString()), $"Threw error: {_error.ToString()}");
             Assert.Equal(0, run);
 
-            Assert.Contains("Usage: microsoft.openapi ", _output.ToString());
+            Assert.Contains("Usage: openapi ", _output.ToString());
         }
 
         [Fact]
@@ -61,7 +61,7 @@ namespace Microsoft.DotNet.OpenApi.Add.Tests
             Assert.True(string.IsNullOrEmpty(_error.ToString()), $"Threw error: {_error.ToString()}");
             Assert.Equal(0, run);
 
-            Assert.Contains("Usage: microsoft.openapi ", _output.ToString());
+            Assert.Contains("Usage: openapi ", _output.ToString());
         }
 
         [Fact]
