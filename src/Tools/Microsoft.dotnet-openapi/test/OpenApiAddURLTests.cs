@@ -34,12 +34,45 @@ namespace Microsoft.DotNet.OpenApi.Add.Tests
                 var content = await reader.ReadToEndAsync();
                 Assert.Contains("<PackageReference Include=\"NSwag.ApiDescription.Client\" Version=\"", content);
                 Assert.Contains(
-    $@"<OpenApiReference Include=""{expectedJsonName}"" SourceUrl=""{FakeOpenApiUrl}"" CodeGenerator=""NSwagCSharp"" />", content);
+    $@"<OpenApiReference Include=""{expectedJsonName}"" SourceUrl=""{FakeOpenApiUrl}"" />", content);
             }
 
             var jsonFile = Path.Combine(_tempDir.Root, expectedJsonName);
             Assert.True(File.Exists(jsonFile));
             using (var jsonStream = new FileInfo(jsonFile).OpenRead())
+            using (var reader = new StreamReader(jsonStream))
+            {
+                var content = await reader.ReadToEndAsync();
+                Assert.Equal(Content, content);
+            }
+        }
+
+        [Fact]
+        public async Task OpenApi_Add_Url_NSwagCSharp()
+        {
+            var project = CreateBasicProject(withOpenApi: false);
+
+            var app = GetApplication();
+            var run = app.Execute(new[] { "add", "url", FakeOpenApiUrl, "--code-generator", "NSwagCSharp" });
+
+            Assert.True(string.IsNullOrEmpty(_error.ToString()), $"Threw error: {_error.ToString()}");
+            Assert.Equal(0, run);
+
+            var expectedJsonName = Path.Combine("openapi", "openapi.json");
+
+            // csproj contents
+            using (var csprojStream = new FileInfo(project.Project.Path).OpenRead())
+            using (var reader = new StreamReader(csprojStream))
+            {
+                var content = await reader.ReadToEndAsync();
+                Assert.Contains("<PackageReference Include=\"NSwag.ApiDescription.Client\" Version=\"", content);
+                Assert.Contains(
+    $@"<OpenApiReference Include=""{expectedJsonName}"" SourceUrl=""{FakeOpenApiUrl}"" CodeGenerator=""NSwagCSharp"" />", content);
+            }
+
+            var resultFile = Path.Combine(_tempDir.Root, expectedJsonName);
+            Assert.True(File.Exists(resultFile));
+            using (var jsonStream = new FileInfo(resultFile).OpenRead())
             using (var reader = new StreamReader(jsonStream))
             {
                 var content = await reader.ReadToEndAsync();
@@ -100,7 +133,7 @@ namespace Microsoft.DotNet.OpenApi.Add.Tests
                 var content = await reader.ReadToEndAsync();
                 Assert.Contains("<PackageReference Include=\"NSwag.ApiDescription.Client\" Version=\"", content);
                 Assert.Contains(
-    $@"<OpenApiReference Include=""{expectedJsonName}"" SourceUrl=""{FakeOpenApiUrl}"" CodeGenerator=""NSwagCSharp"" />", content);
+    $@"<OpenApiReference Include=""{expectedJsonName}"" SourceUrl=""{FakeOpenApiUrl}"" />", content);
             }
 
             var resultFile = Path.Combine(_tempDir.Root, expectedJsonName);
@@ -134,7 +167,7 @@ namespace Microsoft.DotNet.OpenApi.Add.Tests
                 var content = await reader.ReadToEndAsync();
                 Assert.Contains("<PackageReference Include=\"NSwag.ApiDescription.Client\" Version=\"", content);
                 Assert.Contains(
-    $@"<OpenApiReference Include=""{expectedJsonName}"" SourceUrl=""{FakeOpenApiUrl}"" CodeGenerator=""NSwagCSharp"" />", content);
+    $@"<OpenApiReference Include=""{expectedJsonName}"" SourceUrl=""{FakeOpenApiUrl}"" />", content);
             }
 
             var resultFile = Path.Combine(_tempDir.Root, expectedJsonName);
@@ -159,7 +192,7 @@ namespace Microsoft.DotNet.OpenApi.Add.Tests
                 var content = await reader.ReadToEndAsync();
                 Assert.Contains("<PackageReference Include=\"NSwag.ApiDescription.Client\" Version=\"", content);
                 Assert.Contains(
-    $@"<OpenApiReference Include=""{expectedJsonName}"" SourceUrl=""{FakeOpenApiUrl}"" CodeGenerator=""NSwagCSharp"" />", content);
+    $@"<OpenApiReference Include=""{expectedJsonName}"" SourceUrl=""{FakeOpenApiUrl}"" />", content);
                 Assert.DoesNotContain(
                     $@"<OpenApiReference Include=""{expectedJsonName}"" SourceUrl=""{DifferentUrl}"" CodeGenerator=""NSwagCSharp"" />", content);
             }

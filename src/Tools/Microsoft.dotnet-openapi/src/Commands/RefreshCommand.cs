@@ -30,16 +30,8 @@ namespace Microsoft.DotNet.OpenApi.Commands
 
             var sourceFile = Ensure.NotNullOrEmpty(_sourceFileArg.Value, SourceURLArgName);
 
-            if (IsUrl(sourceFile))
-            {
-                var destination = FindReferenceFromUrl(projectFile, sourceFile);
-
-                await DownloadToFileAsync(sourceFile, destination, overwrite: true);
-            }
-            else
-            {
-                throw new ArgumentException($"'dotnet openapi refresh' must be given a URL");
-            }
+            var destination = FindReferenceFromUrl(projectFile, sourceFile);
+            await DownloadToFileAsync(sourceFile, destination, overwrite: true);
 
             return 0;
         }
@@ -63,7 +55,12 @@ namespace Microsoft.DotNet.OpenApi.Commands
 
         protected override bool ValidateArguments()
         {
-            Ensure.NotNullOrEmpty(_sourceFileArg.Value, SourceURLArgName);
+            var sourceFile = Ensure.NotNullOrEmpty(_sourceFileArg.Value, SourceURLArgName);
+            if (!IsUrl(sourceFile))
+            {
+                throw new ArgumentException($"'dotnet openapi refresh' must be given a URL");
+            }
+
             return true;
         }
     }

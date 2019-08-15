@@ -132,16 +132,16 @@ namespace Microsoft.DotNet.OpenApi.Commands
             string tagName,
             FileInfo projectFile,
             string sourceFile,
-            CodeGenerator codeGenerator,
+            CodeGenerator? codeGenerator,
             string sourceUrl = null)
         {
             var project = LoadProject(projectFile);
             var items = project.GetItems(tagName);
             var fileItems = items.Where(i => string.Equals(GetFullPath(i.EvaluatedInclude), GetFullPath(sourceFile), StringComparison.Ordinal));
 
-            if (fileItems.Count() >= 1)
+            if (fileItems.Count() > 0)
             {
-                Warning.Write($"One or more references to {sourceFile} already exist. Duplicate references could lead to unexpected behavior.");
+                Warning.Write($"One or more references to {sourceFile} already exist in '{project.FullPath}'. Duplicate references could lead to unexpected behavior.");
                 return;
             }
 
@@ -154,24 +154,19 @@ namespace Microsoft.DotNet.OpenApi.Commands
                 }
             }
 
-            if (fileItems.Count() == 0)
+            var metadata = new Dictionary<string, string>();
+
+            if (!string.IsNullOrEmpty(sourceUrl))
             {
-                var metadata = new Dictionary<string, string>();
+                metadata[SourceUrlAttrName] = sourceUrl;
+            }
 
-                if (!string.IsNullOrEmpty(sourceUrl))
-                {
-                    metadata[SourceUrlAttrName] = sourceUrl;
-                }
-
+            if(codeGenerator != null)
+            {
                 metadata[CodeGeneratorAttrName] = codeGenerator.ToString();
+            }
 
-                project.AddElementWithAttributes(tagName, sourceFile, metadata);
-            }
-            else
-            {
-                Warning.Write($"A reference to '{sourceFile}' already exists in '{project.FullPath}'.");
-                return;
-            }
+            project.AddElementWithAttributes(tagName, sourceFile, metadata);
         }
 
         internal async Task DownloadToFileAsync(string url, string destinationPath, bool overwrite)
@@ -190,16 +185,16 @@ namespace Microsoft.DotNet.OpenApi.Commands
             await WriteToFileAsync(content, destinationPath, overwrite);
         }
 
-        internal CodeGenerator GetCodeGenerator(CommandOption codeGeneratorOption)
+        internal CodeGenerator? GetCodeGenerator(CommandOption codeGeneratorOption)
         {
-            CodeGenerator codeGenerator;
+            CodeGenerator? codeGenerator;
             if (codeGeneratorOption.HasValue())
             {
                 codeGenerator = Enum.Parse<CodeGenerator>(codeGeneratorOption.Value());
             }
             else
             {
-                codeGenerator = CodeGenerator.NSwagCSharp;
+                codeGenerator = null;
             }
 
             return codeGenerator;
@@ -217,7 +212,7 @@ namespace Microsoft.DotNet.OpenApi.Commands
             }
         }
 
-        internal async Task EnsurePackagesInProjectAsync(FileInfo projectFile, CodeGenerator codeGenerator)
+        internal async Task EnsurePackagesInProjectAsync(FileInfo projectFile, CodeGenerator? codeGenerator)
         {
             var urlPackages = await LoadPackageVersionsFromURLAsync();
             var attributePackages = GetServicePackages(codeGenerator);
@@ -313,12 +308,13 @@ namespace Microsoft.DotNet.OpenApi.Commands
             }
         }
 
-        private static IDictionary<string, string> GetServicePackages(CodeGenerator type)
+        private static IDictionary<string, string> GetServicePackages(CodeGenerator? type)
         {
-            var name = Enum.GetName(typeof(CodeGenerator), type);
+            CodeGenerator generator = type ?? CodeGenerator.NSwagCSharp;
+            var name = Enum.GetName(typeof(CodeGenerator), generator);
             var attributes = typeof(Program).Assembly.GetCustomAttributes<OpenApiDependencyAttribute>();
 
-            var packages = attributes.Where(a => a.CodeGenerators.Contains(type));
+            var packages = attributes.Where(a => a.CodeGenerators.Contains(generator));
             var result = new Dictionary<string, string>();
             if (packages != null)
             {
