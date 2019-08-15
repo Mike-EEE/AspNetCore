@@ -114,6 +114,65 @@ namespace Microsoft.DotNet.OpenApi.Add.Tests
         }
 
         [Fact]
+        public async Task OpenApi_Add_URL_FileAlreadyExists_Fail()
+        {
+            var project = CreateBasicProject(withOpenApi: false);
+
+            var app = GetApplication();
+            var outputFile = Path.Combine("outputdir", "file.yaml");
+            var run = app.Execute(new[] { "add", "url", FakeOpenApiUrl, "--output-file", outputFile });
+
+            Assert.True(string.IsNullOrEmpty(_error.ToString()), $"Threw error: {_error.ToString()}");
+            Assert.Equal(0, run);
+
+            var expectedJsonName = Path.Combine("outputdir", "file.yaml");
+
+            // csproj contents
+            using (var csprojStream = new FileInfo(project.Project.Path).OpenRead())
+            using (var reader = new StreamReader(csprojStream))
+            {
+                var content = await reader.ReadToEndAsync();
+                Assert.Contains("<PackageReference Include=\"NSwag.ApiDescription.Client\" Version=\"", content);
+                Assert.Contains(
+    $@"<OpenApiReference Include=""{expectedJsonName}"" SourceUrl=""{FakeOpenApiUrl}"" CodeGenerator=""NSwagCSharp"" />", content);
+            }
+
+            var resultFile = Path.Combine(_tempDir.Root, expectedJsonName);
+            Assert.True(File.Exists(resultFile));
+            using (var jsonStream = new FileInfo(resultFile).OpenRead())
+            using (var reader = new StreamReader(jsonStream))
+            {
+                var content = await reader.ReadToEndAsync();
+                Assert.Equal(Content, content);
+            }
+
+            // Second reference, same output
+            app = GetApplication();
+            run = app.Execute(new[] { "add", "url", DifferentUrl, "--output-file", outputFile});
+            Assert.Equal(1, run);
+            Assert.True(_error.ToString().Contains("Aborting to avoid conflicts."), $"Should have aborted to avoid conflicts");
+
+            // csproj contents
+            using (var csprojStream = new FileInfo(project.Project.Path).OpenRead())
+            using (var reader = new StreamReader(csprojStream))
+            {
+                var content = await reader.ReadToEndAsync();
+                Assert.Contains("<PackageReference Include=\"NSwag.ApiDescription.Client\" Version=\"", content);
+                Assert.Contains(
+    $@"<OpenApiReference Include=""{expectedJsonName}"" SourceUrl=""{FakeOpenApiUrl}"" CodeGenerator=""NSwagCSharp"" />", content);
+                Assert.DoesNotContain(
+                    $@"<OpenApiReference Include=""{expectedJsonName}"" SourceUrl=""{DifferentUrl}"" CodeGenerator=""NSwagCSharp"" />", content);
+            }
+
+            using (var jsonStream = new FileInfo(resultFile).OpenRead())
+            using (var reader = new StreamReader(jsonStream))
+            {
+                var content = await reader.ReadToEndAsync();
+                Assert.Equal(Content, content);
+            }
+        }
+
+        [Fact]
         public void OpenApi_Add_URL_MultipleTimes_OnlyOneReference()
         {
             var project = CreateBasicProject(withOpenApi: false);

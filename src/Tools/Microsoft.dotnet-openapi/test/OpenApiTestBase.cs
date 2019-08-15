@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Openapi.Tools;
@@ -22,7 +21,12 @@ namespace Microsoft.DotNet.OpenApi.Tests
 
         protected const string Content = @"{""x-generator"": ""NSwag""}";
         protected const string FakeOpenApiUrl = "https://contoso.com/openapi.json";
+        protected const string DifferentUrl = "https://contoso.com/different.json";
         protected const string PackageUrl = "https://go.microsoft.com/fwlink/?linkid=2099561";
+        protected const string DifferentUrlContent = @"
+{
+    ""x-generator"": ""NSwag""
+}";
         protected const string PackageUrlContent = @"
 {
   ""Version"" : ""1.0"",
@@ -65,24 +69,15 @@ namespace Microsoft.DotNet.OpenApi.Tests
 
         internal Application GetApplication()
         {
-            AnnounceTestStart();
-
             return new Application(
                 _tempDir.Root, new TestHttpClientWrapper(DownloadMock()), _output, _error);
-        }
-
-        private void AnnounceTestStart()
-        {
-            var type = _outputHelper.GetType();
-            var testMember = type.GetField("test", BindingFlags.Instance | BindingFlags.NonPublic);
-            var test = (ITest)testMember.GetValue(_outputHelper);
-            _outputHelper.WriteLine($"Starting test '{test.DisplayName}'");
         }
 
         private IDictionary<string, string> DownloadMock()
         {
             return new Dictionary<string, string> {
                 { FakeOpenApiUrl, Content },
+                { DifferentUrl, DifferentUrlContent },
                 { PackageUrl, PackageUrlContent }
             };
         }

@@ -50,7 +50,7 @@ namespace Microsoft.DotNet.OpenApi.Commands
                 }
                 else
                 {
-                    throw new ArgumentException($"{SourceFileArgName} of '{sourceFile}' was not valid. Valid values are a JSON file or a YAML file");
+                    throw new ArgumentException($"{SourceFileArgName} of '{sourceFile}' could not be found.");
                 }
             }
 

@@ -30,10 +30,10 @@ namespace Microsoft.DotNet.OpenApi
 
                 return result;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-                Console.Error.WriteLine("Unexpected error:");
-                Console.Error.WriteLine(ex.ToString());
+                errorWriter.Write("Unexpected error:");
+                errorWriter.WriteLine(ex.ToString());
             }
             finally
             {
@@ -43,8 +43,8 @@ namespace Microsoft.DotNet.OpenApi
                 outputWriter.Dispose();
                 errorWriter.Dispose();
 
-                Console.Write(output);
-                Console.Error.Write(error);
+                Console.WriteLine(output);
+                Console.Error.WriteLine(error);
             }
 
             return 1;

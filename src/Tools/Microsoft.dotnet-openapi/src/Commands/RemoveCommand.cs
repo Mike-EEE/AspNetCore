@@ -38,7 +38,7 @@ namespace Microsoft.DotNet.OpenApi.Commands
             {
                 var file = RemoveServiceReference(OpenApiReference, projectFile, sourceFile);
 
-                if(file != null)
+                if (file != null)
                 {
                     File.Delete(GetFullPath(file));
                 }
@@ -56,8 +56,8 @@ namespace Microsoft.DotNet.OpenApi.Commands
             {
                 var include = item.EvaluatedInclude;
                 var sourceUrl = item.HasMetadata(SourceUrlAttrName) ? item.GetMetadataValue(SourceUrlAttrName) : null;
-                if (string.Equals(include, sourceFile, StringComparison.Ordinal)
-                    || string.Equals(sourceUrl, sourceFile))
+                if (string.Equals(include, sourceFile, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(sourceUrl, sourceFile, StringComparison.OrdinalIgnoreCase))
                 {
                     project.RemoveItem(item);
                     project.Save();

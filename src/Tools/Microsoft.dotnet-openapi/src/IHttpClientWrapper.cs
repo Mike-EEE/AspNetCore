@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.Openapi.Tools
 {
-    public interface IHttpClientWrapper : IDisposable
+    internal interface IHttpClientWrapper : IDisposable
     {
         Task<Stream> GetStreamAsync(string url);
     }

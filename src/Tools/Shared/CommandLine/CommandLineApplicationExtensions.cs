@@ -22,13 +22,6 @@ namespace Microsoft.Extensions.CommandLineUtils
                     return 0;
                 });
 
-        public static void OnExecute(this CommandLineApplication app, Func<Task> func)
-            => app.OnExecute(async () =>
-                {
-                    await func();
-                    return 0;
-                });
-
         public static void VersionOptionFromAssemblyAttributes(this CommandLineApplication app, Assembly assembly)
             => app.VersionOption("--version", GetInformationalVersion(assembly));
 

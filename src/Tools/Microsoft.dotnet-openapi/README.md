@@ -81,4 +81,4 @@
 
 |  Argument  | Description | Example |
 | ------------|-------------|---------|
-| source-file | The URL to refresh the reference from. | dotnet openapi refresh *<https://contoso.com/openapi.json*> |
+| source-file | The URL to refresh the reference from. | dotnet openapi refresh *<https://contoso.com/openapi.json>* |
