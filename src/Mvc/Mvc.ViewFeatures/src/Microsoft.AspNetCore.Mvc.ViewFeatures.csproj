@@ -1,11 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Description>ASP.NET Core MVC view rendering features. Contains common types used in most MVC applications as well as view rendering features such as view engines, views, view components, and HTML helpers.
-Commonly used types:
-Microsoft.AspNetCore.Mvc.Controller
-Microsoft.AspNetCore.Mvc.ValidateAntiForgeryTokenAttribute
-Microsoft.AspNetCore.Mvc.ViewComponent</Description>
+    <Description>
+      ASP.NET Core MVC view rendering features. Contains common types used in most MVC applications as well as view rendering features such as view engines, views, view components, and HTML helpers.
+      Commonly used types:
+      Microsoft.AspNetCore.Mvc.Controller
+      Microsoft.AspNetCore.Mvc.ValidateAntiForgeryTokenAttribute
+      Microsoft.AspNetCore.Mvc.ViewComponent
+    </Description>
     <TargetFramework>netcoreapp3.0</TargetFramework>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -27,10 +29,9 @@ Microsoft.AspNetCore.Mvc.ViewComponent</Description>
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="..\..\..\Shared\Components\ComponentDescriptorSerializer.cs" />
-    <Compile Include="..\..\..\Shared\Components\ComponentDescriptorSerializer.Serialize.cs" />
-    <Compile Include="..\..\..\Shared\Components\ComponentMarker.cs" />
-    <Compile Include="..\..\..\Shared\Components\ComponentDescriptorInstance.cs" />
+    <Compile Include="$(RepoRoot)src\Shared\Components\ServerComponentSerializationSettings.cs" />
+    <Compile Include="$(RepoRoot)src\Shared\Components\ServerComponentMarker.cs" />
+    <Compile Include="$(RepoRoot)src\Shared\Components\ServerComponent.cs" />
   </ItemGroup>
 
 </Project>

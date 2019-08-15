@@ -44,17 +44,12 @@ export class CircuitDescriptor {
     }
   }
 
-  public resolveElement(sequenceOrSelector: string): LogicalElement {
-    const sequence = getSequence(sequenceOrSelector);
-    if (sequence !== undefined) {
-      return toLogicalRootCommentElement(this.components[sequence].start as Comment, this.components[sequence].end as Comment);
+  public resolveElement(sequence: string): LogicalElement {
+    const parsedSequence = Number.parseInt(sequence);
+    if (!Number.isNaN(parsedSequence)) {
+      return toLogicalRootCommentElement(this.components[parsedSequence].start as Comment, this.components[parsedSequence].end as Comment);
     } else {
-      throw new Error(`Invalid sequence number '${sequenceOrSelector}'.`);
-    }
-
-    function getSequence(sequenceOrSelector: string): number | undefined {
-      const result = Number.parseInt(sequenceOrSelector);
-      return Number.isNaN(result) ? undefined : result;
+      throw new Error(`Invalid sequence number '${sequence}'.`);
     }
   }
 }
@@ -175,7 +170,7 @@ function createComponentComment(json: string, start: Node, iterator: ComponentCo
     throw new Error(`Invalid component type '${type}'.`);
   }
 
-  if (descriptor) {
+  if (!descriptor) {
     throw new Error('descriptor must be defined when using a descriptor.');
   }
 
@@ -183,8 +178,8 @@ function createComponentComment(json: string, start: Node, iterator: ComponentCo
     throw new Error('sequence must be defined when using a descriptor.');
   }
 
-  const [parsedSequenceOk, parsedSequence] = getParsedSequence(sequence);
-  if (!parsedSequenceOk) {
+  const parsedSequence = Number.parseInt(sequence);
+  if (Number.isNaN(parsedSequence)) {
     throw new Error(`Error parsing the sequence '${sequence}' for component '${json}'`);
   }
 
@@ -212,11 +207,6 @@ function createComponentComment(json: string, start: Node, iterator: ComponentCo
       end,
     };
   }
-}
-
-function getParsedSequence(sequence: string): [boolean, number] {
-  const result = Number.parseInt(sequence);
-  return [Number.isNaN(result), result];
 }
 
 function getComponentEndComment(prerenderedId: string, iterator: ComponentCommentIterator): ChildNode | undefined {

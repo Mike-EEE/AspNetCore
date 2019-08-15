@@ -7,55 +7,93 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text.Json;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
-namespace Microsoft.AspNetCore.Components
+namespace Microsoft.AspNetCore.Components.Server
 {
-    // ComponentDescriptorSerializer is an abstraction shared by both MVC and Blazor
-    // This file holds the definition used by Blazor to deserialize descriptors.
-    internal partial class ComponentDescriptorSerializer
+    // Shared settings for serializing and deserializing server components
+    // **Component descriptor protocol**
+    // MVC serializes one or more components as comments in HTML.
+    // Each comment is in the form <!-- Blazor: <<Json>> -->
+    // Where <<Json>> has the following properties:
+    // 'type' indicates the marker type. For now it's limited to server.
+    // 'sequence' indicates the order in which this component got rendered on the server.
+    // 'descriptor' a data-protected payload that allows the server to validate the legitimacy of the rendered component.
+    // 'prerenderId' a unique identifier that uniquely identifies the marker to match start and end markers.
+    //
+    // descriptor holds the information to validate a component render request. It prevents an infinite number of components
+    // from being rendered by a given client.
+    //
+    // descriptor is a data protected json payload that holds the following information
+    // 'sequence' indicates the order in which this component got rendered on the server.
+    // 'assemblyName' the assembly name for the rendered component.
+    // 'type' the full type name for the rendered component.
+    // 'invocationId' a random string that matches all components rendered by as part of a single HTTP response.
+
+    // Serialization:
+    // For a given response, MVC renders one or more markers in sequence, including a descriptor for each rendered
+    // component containing the information described above.
+
+    // Deserialization:
+    // To prevent a client from rendering an infinite amount of components, we require clients to send all component
+    // markers in order. They can do so thanks to the sequence included in the marker.
+    // When we process a marker we do the following.
+    // * We unprotect the data-protected information.
+    // * We validate that the sequence number for the descriptor goes after the previous descriptor.
+    // * We compare the invocationId for the previous descriptor against the invocationId for the current descriptor to make sure they match.
+    // By doing this we achieve three things:
+    // * We ensure that the descriptor came from the server.
+    // * We ensure that a client can't just send an infinite amount of components to render.
+    // * We ensure that we do the minimal amount of work in the case of an invalid sequence of descriptors.
+    //
+    // For example:
+    // A client can't just send 100 component markers and force us to process them if the server didn't generate those 100 markers.
+    //  * If a marker is out of sequence we will fail early, so we process at most n-1 markers.
+    //  * If a marker has the right sequence but the invocation ID is different we will fail at that point. We know for sure that the
+    //    component wasn't render as part of the same response.
+    //  * If a marker can't be unprotected we will fail early. We know that the marker was tampered with and can't be trusted.
+    internal class ServerComponentDeserializer
     {
-        public ComponentDescriptorSerializer(
+        private readonly IDataProtector _dataProtector;
+        private readonly ILogger<ServerComponentDeserializer> _logger;
+        private readonly ServerComponentTypeCache _rootComponentTypeCache;
+
+        public ServerComponentDeserializer(
             IDataProtectionProvider dataProtectionProvider,
-            ILogger<ComponentDescriptorSerializer> logger,
-            RootComponentTypeCache rootComponentTypeCache)
+            ILogger<ServerComponentDeserializer> logger,
+            ServerComponentTypeCache rootComponentTypeCache)
         {
-            DataProtector = dataProtectionProvider.CreateProtector(DataProtectionProviderPurpose);
-            Logger = logger;
-            RootComponentTypeCache = rootComponentTypeCache;
+            _dataProtector = dataProtectionProvider.CreateProtector(ServerComponentSerializationSettings.DataProtectionProviderPurpose);
+            _logger = logger;
+            _rootComponentTypeCache = rootComponentTypeCache;
         }
-
-        public ILogger<ComponentDescriptorSerializer> Logger { get; }
-
-        public RootComponentTypeCache RootComponentTypeCache { get; }
 
         public bool TryDeserializeComponentDescriptorCollection(string serializedComponentRecords, out List<ComponentDescriptor> descriptors)
         {
-            var markers = JsonSerializer.Deserialize<IEnumerable<ComponentMarker>>(serializedComponentRecords, _jsonSerializationOptions);
+            var markers = JsonSerializer.Deserialize<IEnumerable<ServerComponentMarker>>(serializedComponentRecords, ServerComponentSerializationSettings.JsonSerializationOptions);
             descriptors = new List<ComponentDescriptor>();
             int lastSequence = -1;
 
-            var previousInstance = new ComponentDescriptorInstance();
+            var previousInstance = new ServerComponent();
             foreach (var marker in markers)
             {
-                if (marker.Type != ComponentMarker.ServerMarkerType)
+                if (marker.Type != ServerComponentMarker.ServerMarkerType)
                 {
-                    Log.InvalidMarkerType(Logger, marker.Type);
+                    Log.InvalidMarkerType(_logger, marker.Type);
                     descriptors.Clear();
                     return false;
                 }
 
                 if (marker.Sequence == null)
                 {
-                    Log.MissingMarkerSequence(Logger);
+                    Log.MissingMarkerSequence(_logger);
                     descriptors.Clear();
                     return false;
                 }
 
                 if (marker.Descriptor == null)
                 {
-                    Log.MissingMarkerDescriptor(Logger);
+                    Log.MissingMarkerDescriptor(_logger);
                     descriptors.Clear();
                     return false;
                 }
@@ -71,7 +109,7 @@ namespace Microsoft.AspNetCore.Components
                 // We force our client to send the descriptors in order so that we do minimal work.
                 if (lastSequence != -1 && lastSequence != instance.Sequence - 1)
                 {
-                    Log.OutOfSequenceDescriptor(Logger, lastSequence, instance.Sequence);
+                    Log.OutOfSequenceDescriptor(_logger, lastSequence, instance.Sequence);
                     descriptors.Clear();
                     return false;
                 }
@@ -81,7 +119,7 @@ namespace Microsoft.AspNetCore.Components
                         MemoryMarshal.AsBytes(previousInstance.InvocationId.AsSpan()),
                         MemoryMarshal.AsBytes(instance.InvocationId.AsSpan())))
                 {
-                    Log.MismatchedInvocationId(Logger, previousInstance.InvocationId, instance.InvocationId);
+                    Log.MismatchedInvocationId(_logger, previousInstance.InvocationId, instance.InvocationId);
                     return false;
                 }
 
@@ -95,38 +133,38 @@ namespace Microsoft.AspNetCore.Components
             return true;
         }
 
-        private (ComponentDescriptor, ComponentDescriptorInstance) DeserializeComponentDescriptor(ComponentMarker record)
+        private (ComponentDescriptor, ServerComponent) DeserializeComponentDescriptor(ServerComponentMarker record)
         {
             string unprotected;
             try
             {
-                unprotected = DataProtector.Unprotect(record.Descriptor);
+                unprotected = _dataProtector.Unprotect(record.Descriptor);
             }
             catch (Exception e)
             {
-                Log.FailedToUnprotectDescriptor(Logger, e);
+                Log.FailedToUnprotectDescriptor(_logger, e);
                 return default;
             }
 
-            ComponentDescriptorInstance descriptorInstance;
+            ServerComponent descriptorInstance;
             try
             {
-                descriptorInstance = JsonSerializer.Deserialize<ComponentDescriptorInstance>(
+                descriptorInstance = JsonSerializer.Deserialize<ServerComponent>(
                     unprotected,
-                    _jsonSerializationOptions);
+                    ServerComponentSerializationSettings.JsonSerializationOptions);
             }
             catch (Exception e)
             {
-                Log.FailedToDeserializeDescriptor(Logger, e);
+                Log.FailedToDeserializeDescriptor(_logger, e);
                 return default;
             }
 
-            var componentType = RootComponentTypeCache
+            var componentType = _rootComponentTypeCache
                 .GetRootComponent(descriptorInstance.AssemblyName, descriptorInstance.TypeName);
 
             if (componentType == null)
             {
-                Log.FailedToFindComponent(Logger, descriptorInstance.TypeName, descriptorInstance.AssemblyName);
+                Log.FailedToFindComponent(_logger, descriptorInstance.TypeName, descriptorInstance.AssemblyName);
                 return default;
             }
 
@@ -189,26 +227,26 @@ namespace Microsoft.AspNetCore.Components
                 new EventId(8, "OutOfSequenceDescriptor"),
                 "The last descriptor sequence was '{lastSequence}' and got a descriptor with sequence '{receivedSequence}'.");
 
-            internal static void FailedToDeserializeDescriptor(ILogger<ComponentDescriptorSerializer> logger, Exception e) =>
+            internal static void FailedToDeserializeDescriptor(ILogger<ServerComponentDeserializer> logger, Exception e) =>
                 _failedToDeserializeDescriptor(logger, e);
 
-            internal static void FailedToFindComponent(ILogger<ComponentDescriptorSerializer> logger, string assemblyName, string typeName) =>
+            internal static void FailedToFindComponent(ILogger<ServerComponentDeserializer> logger, string assemblyName, string typeName) =>
                 _failedToFindComponent(logger, assemblyName, typeName, null);
 
-            internal static void FailedToUnprotectDescriptor(ILogger<ComponentDescriptorSerializer> logger, Exception e) =>
+            internal static void FailedToUnprotectDescriptor(ILogger<ServerComponentDeserializer> logger, Exception e) =>
                 _failedToUnprotectDescriptor(logger, e);
 
-            internal static void InvalidMarkerType(ILogger<ComponentDescriptorSerializer> logger, string markerType) =>
+            internal static void InvalidMarkerType(ILogger<ServerComponentDeserializer> logger, string markerType) =>
                 _invalidMarkerType(logger, markerType, null);
 
-            internal static void MismatchedInvocationId(ILogger<ComponentDescriptorSerializer> logger, string invocationId, string currentInvocationId) =>
+            internal static void MismatchedInvocationId(ILogger<ServerComponentDeserializer> logger, string invocationId, string currentInvocationId) =>
                 _mismatchedInvocationId(logger, invocationId, currentInvocationId, null);
 
-            internal static void MissingMarkerDescriptor(ILogger<ComponentDescriptorSerializer> logger) => _missingMarkerDescriptor(logger, null);
+            internal static void MissingMarkerDescriptor(ILogger<ServerComponentDeserializer> logger) => _missingMarkerDescriptor(logger, null);
 
-            internal static void MissingMarkerSequence(ILogger<ComponentDescriptorSerializer> logger) => _failedToDeserializeDescriptor(logger, null);
+            internal static void MissingMarkerSequence(ILogger<ServerComponentDeserializer> logger) => _failedToDeserializeDescriptor(logger, null);
 
-            internal static void OutOfSequenceDescriptor(ILogger<ComponentDescriptorSerializer> logger, int lastSequence, int sequence) =>
+            internal static void OutOfSequenceDescriptor(ILogger<ServerComponentDeserializer> logger, int lastSequence, int sequence) =>
                 _outOfSequenceDescriptor(logger, lastSequence, sequence, null);
         }
     }

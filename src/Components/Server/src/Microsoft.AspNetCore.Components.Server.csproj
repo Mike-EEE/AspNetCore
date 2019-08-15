@@ -67,12 +67,9 @@
     <Compile Include="$(MessagePackRoot)SequenceReaderExtensions.cs" LinkBase="BlazorPack\MessagePack" />
 
     <!-- Shared descriptor infrastructure with MVC -->
-    <Compile Include="$(RepoRoot)src\Shared\Components\ComponentDescriptor.cs" LinkBase="Descriptors" />
-    <Compile Include="$(RepoRoot)src\Shared\Components\ComponentDescriptorInstance.cs" LinkBase="Descriptors" />
-    <Compile Include="$(RepoRoot)src\Shared\Components\ComponentDescriptorSerializer.cs" LinkBase="Descriptors" />
-    <Compile Include="$(RepoRoot)src\Shared\Components\ComponentDescriptorSerializer.Deserialize.cs" LinkBase="Descriptors" />
-    <Compile Include="$(RepoRoot)src\Shared\Components\ComponentMarker.cs" LinkBase="Descriptors" />
-    <Compile Include="$(RepoRoot)src\Shared\Components\RootComponentTypeCache.cs" LinkBase="Descriptors" />
+    <Compile Include="$(RepoRoot)src\Shared\Components\ServerComponent.cs" />
+    <Compile Include="$(RepoRoot)src\Shared\Components\ServerComponentSerializationSettings.cs" />
+    <Compile Include="$(RepoRoot)src\Shared\Components\ServerComponentMarker.cs" />
   </ItemGroup>
 
   <PropertyGroup>

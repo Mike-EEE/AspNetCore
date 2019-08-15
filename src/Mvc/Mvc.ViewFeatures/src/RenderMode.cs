@@ -16,15 +16,17 @@ namespace Microsoft.AspNetCore.Mvc.Rendering
         /// <summary>
         /// Renders the component into static HTML.
         /// </summary>
-        Html = 1,
+        Static = 1,
 
         /// <summary>
-        /// Renders a marker for a Blazor server-side application.
+        /// Renders a marker for a Blazor server-side application. This doesn't include any output from the component.
+        /// When the user-agent starts, it uses this marker to bootstrap a blazor application.
         /// </summary>
         Server = 2,
 
         /// <summary>
         /// Renders the component into static HTML and includes a marker for a Blazor server-side application.
+        /// When the user-agent starts, it uses this marker to bootstrap a blazor application.
         /// </summary>
         ServerPrerendered = 3,
 

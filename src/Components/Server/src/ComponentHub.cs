@@ -37,20 +37,20 @@ namespace Microsoft.AspNetCore.Components.Server
     internal sealed class ComponentHub : Hub
     {
         private static readonly object CircuitKey = new object();
-        private readonly DefaultCircuitFactory _circuitFactory;
+        private readonly ServerComponentDeserializer _serverComponentSerializer;
+        private readonly CircuitFactory _circuitFactory;
         private readonly CircuitRegistry _circuitRegistry;
-        private readonly CircuitOptions _options;
         private readonly ILogger _logger;
 
         public ComponentHub(
-            DefaultCircuitFactory circuitFactory,
+            ServerComponentDeserializer serializer,
+            CircuitFactory circuitFactory,
             CircuitRegistry circuitRegistry,
-            IOptions<CircuitOptions> options,
             ILogger<ComponentHub> logger)
         {
+            _serverComponentSerializer = serializer;
             _circuitFactory = circuitFactory;
             _circuitRegistry = circuitRegistry;
-            _options = options.Value;
             _logger = logger;
         }
 
@@ -72,7 +72,7 @@ namespace Microsoft.AspNetCore.Components.Server
             return _circuitRegistry.DisconnectAsync(circuitHost, Context.ConnectionId);
         }
 
-        public async ValueTask<string> StartCircuit(string baseUri, string uri, string serializedDescriptors)
+        public async ValueTask<string> StartCircuit(string baseUri, string uri, string serializedComponentRecords)
         {
             var circuitHost = GetCircuit();
             if (circuitHost != null)
@@ -101,11 +101,19 @@ namespace Microsoft.AspNetCore.Components.Server
                 return null;
             }
 
+            if (!_serverComponentSerializer.TryDeserializeComponentDescriptorCollection(serializedComponentRecords, out var components))
+            {
+                Log.InvalidInputData(_logger);
+                await NotifyClientError(Clients.Caller, $"The list of component records is not valid.");
+                Context.Abort();
+                return null;
+            }
+
             try
             {
                 var circuitClient = new CircuitClientProxy(Clients.Caller, Context.ConnectionId);
                 circuitHost = _circuitFactory.CreateCircuitHost(
-                    serializedDescriptors,
+                    components,
                     circuitClient,
                     baseUri,
                     uri,
@@ -128,7 +136,7 @@ namespace Microsoft.AspNetCore.Components.Server
                 // If the circuit fails to initialize synchronously we can notify the client immediately
                 // and shut down the connection.
                 Log.CircuitInitializationFailed(_logger, ex);
-                await NotifyClientError(Clients.Caller, GetClientErrorMessage(ex, "The circuit failed to initialize."));
+                await NotifyClientError(Clients.Caller, "The circuit failed to initialize.");
                 Context.Abort();
                 return null;
             }
@@ -159,7 +167,7 @@ namespace Microsoft.AspNetCore.Components.Server
                 return;
             }
 
-             _ = circuitHost.BeginInvokeDotNetFromJS(callId, assemblyName, methodIdentifier, dotNetObjectId, argsJson);
+            _ = circuitHost.BeginInvokeDotNetFromJS(callId, assemblyName, methodIdentifier, dotNetObjectId, argsJson);
         }
 
         public async ValueTask EndInvokeJSFromDotNet(long asyncHandle, bool succeeded, string arguments)
@@ -170,7 +178,7 @@ namespace Microsoft.AspNetCore.Components.Server
                 return;
             }
 
-             _ = circuitHost.EndInvokeJSFromDotNet(asyncHandle, succeeded, arguments);
+            _ = circuitHost.EndInvokeJSFromDotNet(asyncHandle, succeeded, arguments);
         }
 
         public async ValueTask DispatchBrowserEvent(string eventDescriptor, string eventArgs)
@@ -181,7 +189,7 @@ namespace Microsoft.AspNetCore.Components.Server
                 return;
             }
 
-             _ = circuitHost.DispatchEvent(eventDescriptor, eventArgs);
+            _ = circuitHost.DispatchEvent(eventDescriptor, eventArgs);
         }
 
         public async ValueTask OnRenderCompleted(long renderId, string errorMessageOrNull)
@@ -204,7 +212,7 @@ namespace Microsoft.AspNetCore.Components.Server
                 return;
             }
 
-             _ = circuitHost.OnLocationChangedAsync(uri, intercepted);
+            _ = circuitHost.OnLocationChangedAsync(uri, intercepted);
         }
 
         // We store the CircuitHost through a *handle* here because Context.Items is tied to the lifetime
@@ -250,19 +258,6 @@ namespace Microsoft.AspNetCore.Components.Server
         }
 
         private static Task NotifyClientError(IClientProxy client, string error) => client.SendAsync("JS.Error", error);
-
-        private string GetClientErrorMessage(Exception exception, string additionalInformation = null)
-        {
-            if (_options.DetailedErrors)
-            {
-                return exception.ToString();
-            }
-            else
-            {
-                return $"There was an unhandled exception on the current circuit, so this circuit will be terminated. For more details turn on " +
-                    $"detailed exceptions in '{typeof(CircuitOptions).Name}.{nameof(CircuitOptions.DetailedErrors)}'. {additionalInformation}";
-            }
-        }
 
         private static class Log
         {

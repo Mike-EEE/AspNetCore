@@ -31,7 +31,7 @@ namespace Microsoft.AspNetCore.Mvc.ViewFeatures.Test
             var writer = new StringWriter();
 
             // Act
-            var result = await helper.RenderComponentAsync<TestComponent>(RenderMode.Html);
+            var result = await helper.RenderComponentAsync<TestComponent>(RenderMode.Static);
             result.WriteTo(writer, HtmlEncoder.Default);
             var content = writer.ToString();
 
@@ -47,11 +47,12 @@ namespace Microsoft.AspNetCore.Mvc.ViewFeatures.Test
             var writer = new StringWriter();
 
             // Act
-            var result = await helper.RenderComponentAsync<GreetingComponent>(new
-            {
-                Name = "Steve"
-            },
-            RenderMode.Html);
+            var result = await helper.RenderComponentAsync<GreetingComponent>(
+                RenderMode.Static,
+                new
+                {
+                    Name = "Steve"
+                });
             result.WriteTo(writer, HtmlEncoder.Default);
             var content = writer.ToString();
 
@@ -68,11 +69,12 @@ namespace Microsoft.AspNetCore.Mvc.ViewFeatures.Test
 
             // Act
             var state = new OnAfterRenderState();
-            var result = await helper.RenderComponentAsync<OnAfterRenderComponent>(new
-            {
-                State = state
-            },
-            RenderMode.Html);
+            var result = await helper.RenderComponentAsync<OnAfterRenderComponent>(
+                RenderMode.Static,
+                new
+                {
+                    State = state
+                });
 
             result.WriteTo(writer, HtmlEncoder.Default);
 
@@ -88,10 +90,12 @@ namespace Microsoft.AspNetCore.Mvc.ViewFeatures.Test
             var helper = CreateHelper();
 
             // Act & Assert
-            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => helper.RenderComponentAsync<ExceptionComponent>(new
-            {
-                IsAsync = false
-            }, RenderMode.Html));
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => helper.RenderComponentAsync<ExceptionComponent>(
+                RenderMode.Static,
+                new
+                {
+                    IsAsync = false
+                }));
 
             // Assert
             Assert.Equal("Threw an exception synchronously", exception.Message);
@@ -104,11 +108,12 @@ namespace Microsoft.AspNetCore.Mvc.ViewFeatures.Test
             var helper = CreateHelper();
 
             // Act & Assert
-            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => helper.RenderComponentAsync<ExceptionComponent>(new
-            {
-                IsAsync = true
-            },
-            RenderMode.Html));
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => helper.RenderComponentAsync<ExceptionComponent>(
+                RenderMode.Static,
+                new
+                {
+                    IsAsync = true
+                }));
 
             // Assert
             Assert.Equal("Threw an exception asynchronously", exception.Message);
@@ -121,11 +126,13 @@ namespace Microsoft.AspNetCore.Mvc.ViewFeatures.Test
             var helper = CreateHelper();
 
             // Act & Assert
-            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => helper.RenderComponentAsync<ExceptionComponent>(new
-            {
-                JsInterop = true
-            },
-            RenderMode.Html));
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => helper.RenderComponentAsync<ExceptionComponent>(
+                RenderMode.Static,
+                new
+                {
+                    JsInterop = true
+                }
+            ));
 
             // Assert
             Assert.Equal("JavaScript interop calls cannot be issued during server-side prerendering, " +
@@ -151,11 +158,12 @@ namespace Microsoft.AspNetCore.Mvc.ViewFeatures.Test
             var writer = new StringWriter();
 
             // Act
-            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => helper.RenderComponentAsync<RedirectComponent>(new
-            {
-                RedirectUri = "http://localhost/redirect"
-            },
-            RenderMode.Html));
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => helper.RenderComponentAsync<RedirectComponent>(
+                RenderMode.Static,
+                new
+                {
+                    RedirectUri = "http://localhost/redirect"
+                }));
 
             Assert.Equal("A navigation command was attempted during prerendering after the server already started sending the response. " +
                             "Navigation commands can not be issued during server-side prerendering after the response from the server has started. Applications must buffer the" +
@@ -176,11 +184,12 @@ namespace Microsoft.AspNetCore.Mvc.ViewFeatures.Test
             var helper = CreateHelper(ctx);
 
             // Act
-            await helper.RenderComponentAsync<RedirectComponent>(new
-            {
-                RedirectUri = "http://localhost/redirect"
-            },
-            RenderMode.Html);
+            await helper.RenderComponentAsync<RedirectComponent>(
+                RenderMode.Static,
+                new
+                {
+                    RedirectUri = "http://localhost/redirect"
+                });
 
             // Assert
             Assert.Equal(302, ctx.Response.StatusCode);
@@ -237,7 +246,7 @@ namespace Microsoft.AspNetCore.Mvc.ViewFeatures.Test
 </table>";
 
             // Act
-            var result = await helper.RenderComponentAsync<AsyncComponent>(RenderMode.Html);
+            var result = await helper.RenderComponentAsync<AsyncComponent>(RenderMode.Static);
             result.WriteTo(writer, HtmlEncoder.Default);
             var content = writer.ToString();
 

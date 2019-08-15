@@ -6,9 +6,9 @@ namespace Microsoft.AspNetCore.Components
     // The DTO that we data-protect and include into any
     // generated component marker and that allows the client
     // to bootstrap a blazor server-side application.
-    internal struct ComponentDescriptorInstance
+    internal struct ServerComponent
     {
-        public ComponentDescriptorInstance(
+        public ServerComponent(
             int sequence,
             string assemblyName,
             string typeName,

@@ -34,7 +34,7 @@ async function boot(userOptions?: Partial<BlazorOptions>): Promise<void> {
   const initialConnection = await initializeConnection(options, logger, circuit);
   const circuitStarted = await circuit.startCircuit(initialConnection);
   if (!circuitStarted) {
-    logger.log(LogLevel.Information, 'Failed to start the circuit.');
+    logger.log(LogLevel.Error, 'Failed to start the circuit.');
     return;
   }
 

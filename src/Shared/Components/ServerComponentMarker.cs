@@ -8,11 +8,11 @@ namespace Microsoft.AspNetCore.Components
     // Represents the serialized invocation to a component.
     // We serialize this marker into a comment in the generated
     // HTML.
-    internal struct ComponentMarker
+    internal struct ServerComponentMarker
     {
         public const string ServerMarkerType = "server";
 
-        private ComponentMarker(string type, string descriptor, int? sequence, string prerenderId) : this()
+        private ServerComponentMarker(string type, string descriptor, int? sequence, string prerenderId) : this()
         {
             Type = type;
             PrerenderId = prerenderId;
@@ -39,22 +39,22 @@ namespace Microsoft.AspNetCore.Components
         public string Descriptor { get; set; }
 
         // Creates a marker for a prerendered component.
-        public static ComponentMarker Prerendered(int sequence, string descriptor) =>
-            new ComponentMarker(ServerMarkerType, descriptor, sequence, Guid.NewGuid().ToString("N"));
+        public static ServerComponentMarker Prerendered(int sequence, string descriptor) =>
+            new ServerComponentMarker(ServerMarkerType, descriptor, sequence, Guid.NewGuid().ToString("N"));
 
         // Creates a marker for a non prerendered component
-        public static ComponentMarker NonPrerendered(int sequence, string descriptor) =>
-            new ComponentMarker(ServerMarkerType, descriptor, sequence, null);
+        public static ServerComponentMarker NonPrerendered(int sequence, string descriptor) =>
+            new ServerComponentMarker(ServerMarkerType, descriptor, sequence, null);
 
         // Creates the end marker for a prerendered component.
-        public ComponentMarker GetEndRecord()
+        public ServerComponentMarker GetEndRecord()
         {
             if (PrerenderId == null)
             {
                 throw new InvalidOperationException("Can't get an end record for non-prerendered components.");
             }
 
-            return new ComponentMarker(null, null, null, PrerenderId);
+            return new ServerComponentMarker(null, null, null, PrerenderId);
         }
     }
 }

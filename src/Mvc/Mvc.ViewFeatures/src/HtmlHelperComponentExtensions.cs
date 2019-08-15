@@ -30,7 +30,7 @@ namespace Microsoft.AspNetCore.Mvc.Rendering
                 throw new ArgumentNullException(nameof(htmlHelper));
             }
 
-            return htmlHelper.RenderComponentAsync<TComponent>(null, renderMode);
+            return htmlHelper.RenderComponentAsync<TComponent>(renderMode, null);
         }
 
         /// <summary>
@@ -43,36 +43,27 @@ namespace Microsoft.AspNetCore.Mvc.Rendering
         /// <returns>The HTML produced by the rendered <typeparamref name="TComponent"/>.</returns>
         public static async Task<IHtmlContent> RenderComponentAsync<TComponent>(
             this IHtmlHelper htmlHelper,
-            object parameters,
-            RenderMode renderMode) where TComponent : IComponent
+            RenderMode renderMode,
+            object parameters) where TComponent : IComponent
         {
             if (htmlHelper == null)
             {
                 throw new ArgumentNullException(nameof(htmlHelper));
             }
 
-            if (renderMode == default)
+            var context = htmlHelper.ViewContext.HttpContext;
+            return renderMode switch
             {
-                throw new ArgumentException("Can't render a component statically without prerendering it.", nameof(renderMode));
-            }
+                RenderMode.Server => NonPrerenderedBlazorComponent(context, typeof(TComponent), GetPrameterCollection(parameters)),
+                RenderMode.ServerPrerendered => await PrerenderedBlazorComponentAsync(context, typeof(TComponent), GetPrameterCollection(parameters)),
+                RenderMode.Static => await StaticComponentAsync(context, typeof(TComponent), GetPrameterCollection(parameters)),
+                _ => throw new ArgumentException("Invalid render mode", nameof(renderMode)),
+            };
+        }
 
-            var parametersCollection = parameters == null ?
+        private static ParameterView GetPrameterCollection(object parameters) => parameters == null ?
                 ParameterView.Empty :
                 ParameterView.FromDictionary(HtmlHelper.ObjectToDictionary(parameters));
-
-            var context = htmlHelper.ViewContext.HttpContext;
-            switch (renderMode)
-            {
-                case RenderMode.Server:
-                    return NonPrerenderedBlazorComponent(context, typeof(TComponent), parametersCollection);
-                case RenderMode.ServerPrerendered:
-                    return await PrerenderedBlazorComponentAsync(context, typeof(TComponent), parametersCollection);
-                case RenderMode.Html:
-                    return await StaticComponentAsync(context, typeof(TComponent), parametersCollection);
-                default:
-                    throw new ArgumentException("Invalid render mode", nameof(renderMode));
-            }
-        }
 
         private static async Task<IHtmlContent> StaticComponentAsync(HttpContext context, Type type, ParameterView parametersCollection)
         {
@@ -97,7 +88,7 @@ namespace Microsoft.AspNetCore.Mvc.Rendering
 
             var serviceProvider = context.RequestServices;
             var prerenderer = serviceProvider.GetRequiredService<StaticComponentRenderer>();
-            var invocationSerializer = serviceProvider.GetRequiredService<ComponentDescriptorSerializer>();
+            var invocationSerializer = serviceProvider.GetRequiredService<ServerComponentSerializer>();
 
             var currentInvocation = invocationSerializer.SerializeInvocation(
                 context,
@@ -123,7 +114,7 @@ namespace Microsoft.AspNetCore.Mvc.Rendering
             }
 
             var serviceProvider = context.RequestServices;
-            var invocationSerializer = serviceProvider.GetRequiredService<ComponentDescriptorSerializer>();
+            var invocationSerializer = serviceProvider.GetRequiredService<ServerComponentSerializer>();
             var currentInvocation = invocationSerializer.SerializeInvocation(context, type, prerendered:false);
 
             return new ComponentHtmlContent(invocationSerializer.GetPreamble(currentInvocation));

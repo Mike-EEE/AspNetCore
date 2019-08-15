@@ -15,7 +15,7 @@ using Microsoft.JSInterop;
 
 namespace Microsoft.AspNetCore.Components.Server.Circuits
 {
-    internal class DefaultCircuitFactory
+    internal class CircuitFactory
     {
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly ILoggerFactory _loggerFactory;
@@ -23,36 +23,26 @@ namespace Microsoft.AspNetCore.Components.Server.Circuits
         private readonly CircuitOptions _options;
         private readonly ILogger _logger;
 
-        public ComponentDescriptorSerializer DescriptorSerializer { get; }
-
-        public DefaultCircuitFactory(
-            ComponentDescriptorSerializer descriptorSerializer,
+        public CircuitFactory(
             IServiceScopeFactory scopeFactory,
             ILoggerFactory loggerFactory,
             CircuitIdFactory circuitIdFactory,
             IOptions<CircuitOptions> options)
         {
-            DescriptorSerializer = descriptorSerializer;
             _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
             _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
             _circuitIdFactory = circuitIdFactory ?? throw new ArgumentNullException(nameof(circuitIdFactory));
             _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
-
-            _logger = _loggerFactory.CreateLogger<DefaultCircuitFactory>();
+            _logger = _loggerFactory.CreateLogger<CircuitFactory>();
         }
 
         public CircuitHost CreateCircuitHost(
-            string serializedComponentRecords,
+            IReadOnlyList<ComponentDescriptor> components,
             CircuitClientProxy client,
             string baseUri,
             string uri,
             ClaimsPrincipal user)
         {
-            if (!DescriptorSerializer.TryDeserializeComponentDescriptorCollection(serializedComponentRecords, out var components))
-            {
-                throw new InvalidOperationException("Invalid component marker collection.");
-            }
-
             var scope = _scopeFactory.CreateScope();
             var jsRuntime = (RemoteJSRuntime)scope.ServiceProvider.GetRequiredService<IJSRuntime>();
             jsRuntime.Initialize(client);

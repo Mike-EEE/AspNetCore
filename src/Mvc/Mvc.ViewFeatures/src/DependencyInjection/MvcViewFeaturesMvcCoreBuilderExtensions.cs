@@ -175,8 +175,9 @@ namespace Microsoft.Extensions.DependencyInjection
 
             services.TryAddSingleton<IJsonHelper, SystemTextJsonHelper>();
 
-            // Component services
-            services.TryAddSingleton<ComponentDescriptorSerializer>();
+            // Component services for Blazor server-side interop
+            // These are all shared sources located at /src/Shared/Components
+            services.TryAddSingleton<ServerComponentSerializer>();
 
             //
             // View Components
