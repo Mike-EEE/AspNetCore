@@ -4,27 +4,25 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Data;
-using System.Text.RegularExpressions;
 using System.Diagnostics;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Ignitor;
 using Microsoft.AspNetCore.Components.E2ETest.Infrastructure.ServerFixtures;
-using Microsoft.AspNetCore.Components.Web;
+using Microsoft.AspNetCore.Components.RenderTree;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Testing;
 using Xunit;
 using Xunit.Abstractions;
-using Microsoft.AspNetCore.Components.RenderTree;
 
 namespace Microsoft.AspNetCore.Components.E2ETest.ServerExecutionTests
 {
     public class ComponentHubReliabilityTest : IClassFixture<AspNetSiteServerFixture>, IDisposable
     {
-        private static readonly TimeSpan DefaultLatencyTimeout = TimeSpan.FromSeconds(Debugger.IsAttached ? 300 : 10);
+        private static readonly TimeSpan DefaultLatencyTimeout = TimeSpan.FromSeconds(Debugger.IsAttached ? int.MaxValue : 10);
         private readonly AspNetSiteServerFixture _serverFixture;
 
         public ComponentHubReliabilityTest(AspNetSiteServerFixture serverFixture, ITestOutputHelper output)

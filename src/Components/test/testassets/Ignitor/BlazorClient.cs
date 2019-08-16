@@ -4,7 +4,6 @@
 using System;
 using System.Diagnostics;
 using System.Net.Http;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -30,6 +29,7 @@ namespace Ignitor
         }
 
         public TimeSpan? DefaultLatencyTimeout { get; set; } = TimeSpan.FromMilliseconds(500);
+        public TimeSpan? DefaultConnectTimeout { get; set; } = TimeSpan.FromSeconds(10);
 
         public Func<string, Exception> FormatError { get; set; }
 
@@ -294,10 +294,10 @@ namespace Ignitor
                 return true;
             }
 
-            var descriptor = await GetPrerenderDescriptors(uri);
+            var descriptors = await GetPrerenderDescriptors(uri);
             await ExpectRenderBatch(
-                async () => CircuitId = await HubConnection.InvokeAsync<string>("StartCircuit", uri, uri, descriptor),
-                TimeSpan.FromSeconds(10));
+                async () => CircuitId = await HubConnection.InvokeAsync<string>("StartCircuit", uri, uri, descriptors),
+                DefaultConnectTimeout);
             return CircuitId != null;
         }
 

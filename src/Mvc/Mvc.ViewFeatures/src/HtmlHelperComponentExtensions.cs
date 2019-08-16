@@ -17,6 +17,8 @@ namespace Microsoft.AspNetCore.Mvc.Rendering
     /// </summary>
     public static class HtmlHelperComponentExtensions
     {
+        private static readonly object ComponentSequenceKey = new object();
+
         /// <summary>
         /// Renders the <typeparamref name="TComponent"/> <see cref="IComponent"/>.
         /// </summary>
@@ -54,14 +56,25 @@ namespace Microsoft.AspNetCore.Mvc.Rendering
             var context = htmlHelper.ViewContext.HttpContext;
             return renderMode switch
             {
-                RenderMode.Server => NonPrerenderedBlazorComponent(context, typeof(TComponent), GetPrameterCollection(parameters)),
-                RenderMode.ServerPrerendered => await PrerenderedBlazorComponentAsync(context, typeof(TComponent), GetPrameterCollection(parameters)),
-                RenderMode.Static => await StaticComponentAsync(context, typeof(TComponent), GetPrameterCollection(parameters)),
+                RenderMode.Server => NonPrerenderedServerComponent(context, GetOrCreateInvocationId(htmlHelper.ViewContext), typeof(TComponent), GetParametersCollection(parameters)),
+                RenderMode.ServerPrerendered => await PrerenderedServerComponentAsync(context, GetOrCreateInvocationId(htmlHelper.ViewContext), typeof(TComponent), GetParametersCollection(parameters)),
+                RenderMode.Static => await StaticComponentAsync(context, typeof(TComponent), GetParametersCollection(parameters)),
                 _ => throw new ArgumentException("Invalid render mode", nameof(renderMode)),
             };
         }
 
-        private static ParameterView GetPrameterCollection(object parameters) => parameters == null ?
+        private static ServerComponentInvocationSequence GetOrCreateInvocationId(ViewContext viewContext)
+        {
+            if (!viewContext.Items.TryGetValue(ComponentSequenceKey, out var result))
+            {
+                result = new ServerComponentInvocationSequence();
+                viewContext.Items[ComponentSequenceKey] = result;
+            }
+
+            return (ServerComponentInvocationSequence)result;
+        }
+
+        private static ParameterView GetParametersCollection(object parameters) => parameters == null ?
                 ParameterView.Empty :
                 ParameterView.FromDictionary(HtmlHelper.ObjectToDictionary(parameters));
 
@@ -79,7 +92,7 @@ namespace Microsoft.AspNetCore.Mvc.Rendering
             return new ComponentHtmlContent(result);
         }
 
-        private static async Task<IHtmlContent> PrerenderedBlazorComponentAsync(HttpContext context, Type type, ParameterView parametersCollection)
+        private static async Task<IHtmlContent> PrerenderedServerComponentAsync(HttpContext context, ServerComponentInvocationSequence invocationId, Type type, ParameterView parametersCollection)
         {
             if (parametersCollection.GetEnumerator().MoveNext())
             {
@@ -91,7 +104,7 @@ namespace Microsoft.AspNetCore.Mvc.Rendering
             var invocationSerializer = serviceProvider.GetRequiredService<ServerComponentSerializer>();
 
             var currentInvocation = invocationSerializer.SerializeInvocation(
-                context,
+                invocationId,
                 type,
                 prerendered: true);
 
@@ -106,7 +119,7 @@ namespace Microsoft.AspNetCore.Mvc.Rendering
                 invocationSerializer.GetEpilogue(currentInvocation));
         }
 
-        private static IHtmlContent NonPrerenderedBlazorComponent(HttpContext context, Type type, ParameterView parametersCollection)
+        private static IHtmlContent NonPrerenderedServerComponent(HttpContext context, ServerComponentInvocationSequence invocationId, Type type, ParameterView parametersCollection)
         {
             if (parametersCollection.GetEnumerator().MoveNext())
             {
@@ -115,7 +128,7 @@ namespace Microsoft.AspNetCore.Mvc.Rendering
 
             var serviceProvider = context.RequestServices;
             var invocationSerializer = serviceProvider.GetRequiredService<ServerComponentSerializer>();
-            var currentInvocation = invocationSerializer.SerializeInvocation(context, type, prerendered:false);
+            var currentInvocation = invocationSerializer.SerializeInvocation(invocationId, type, prerendered: false);
 
             return new ComponentHtmlContent(invocationSerializer.GetPreamble(currentInvocation));
         }

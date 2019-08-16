@@ -6,8 +6,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Components.Routing;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Components.Web.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -29,10 +27,10 @@ namespace Microsoft.AspNetCore.Components.Server.Circuits
             CircuitIdFactory circuitIdFactory,
             IOptions<CircuitOptions> options)
         {
-            _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
-            _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
-            _circuitIdFactory = circuitIdFactory ?? throw new ArgumentNullException(nameof(circuitIdFactory));
-            _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
+            _scopeFactory = scopeFactory;
+            _loggerFactory = loggerFactory;
+            _circuitIdFactory = circuitIdFactory;
+            _options = options.Value;
             _logger = _loggerFactory.CreateLogger<CircuitFactory>();
         }
 
@@ -93,23 +91,11 @@ namespace Microsoft.AspNetCore.Components.Server.Circuits
 
         private static class Log
         {
-            private static readonly Action<ILogger, string, string, Exception> _createdConnectedCircuit =
+            private static readonly Action<ILogger, string, string, Exception> _createdCircuit =
                 LoggerMessage.Define<string, string>(LogLevel.Debug, new EventId(1, "CreatedConnectedCircuit"), "Created circuit {CircuitId} for connection {ConnectionId}");
 
-            private static readonly Action<ILogger, string, Exception> _createdDisconnectedCircuit =
-                LoggerMessage.Define<string>(LogLevel.Debug, new EventId(2, "CreatedDisconnectedCircuit"), "Created circuit {CircuitId} for disconnected client");
-
-            internal static void CreatedCircuit(ILogger logger, CircuitHost circuitHost)
-            {
-                if (circuitHost.Client.Connected)
-                {
-                    _createdConnectedCircuit(logger, circuitHost.CircuitId, circuitHost.Client.ConnectionId, null);
-                }
-                else
-                {
-                    _createdDisconnectedCircuit(logger, circuitHost.CircuitId, null);
-                }
-            }
+            internal static void CreatedCircuit(ILogger logger, CircuitHost circuitHost) =>
+                _createdCircuit(logger, circuitHost.CircuitId, circuitHost.Client.ConnectionId, null);
         }
     }
 }
