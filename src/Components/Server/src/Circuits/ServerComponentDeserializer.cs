@@ -3,8 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
-using System.Security.Cryptography;
 using System.Text.Json;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
@@ -63,7 +61,10 @@ namespace Microsoft.AspNetCore.Components.Server
             ILogger<ServerComponentDeserializer> logger,
             ServerComponentTypeCache rootComponentTypeCache)
         {
-            _dataProtector = dataProtectionProvider.CreateProtector(ServerComponentSerializationSettings.DataProtectionProviderPurpose);
+            _dataProtector = dataProtectionProvider
+                .CreateProtector(ServerComponentSerializationSettings.DataProtectionProviderPurpose)
+                .ToTimeLimitedDataProtector(); // We need the DP to be a TimeLimitedDP otherwise we can't unprotect the data.
+
             _logger = logger;
             _rootComponentTypeCache = rootComponentTypeCache;
         }
@@ -84,13 +85,6 @@ namespace Microsoft.AspNetCore.Components.Server
                     return false;
                 }
 
-                if (marker.Sequence == null)
-                {
-                    Log.MissingMarkerSequence(_logger);
-                    descriptors.Clear();
-                    return false;
-                }
-
                 if (marker.Descriptor == null)
                 {
                     Log.MissingMarkerDescriptor(_logger);
@@ -98,7 +92,7 @@ namespace Microsoft.AspNetCore.Components.Server
                     return false;
                 }
 
-                var (descriptor, instance) = DeserializeComponentDescriptor(marker);
+                var (descriptor, serverComponent) = DeserializeServerComponent(marker);
                 if (descriptor == null)
                 {
                     // We failed to deserialize the component descriptor for some reason.
@@ -107,33 +101,39 @@ namespace Microsoft.AspNetCore.Components.Server
                 }
 
                 // We force our client to send the descriptors in order so that we do minimal work.
-                if (lastSequence != -1 && lastSequence != instance.Sequence - 1)
+                // The list of descriptors starts with 0 and lastSequence is initialized to -1 so this
+                // check covers that the sequence starts by 0.
+                if (lastSequence != serverComponent.Sequence - 1)
                 {
-                    Log.OutOfSequenceDescriptor(_logger, lastSequence, instance.Sequence);
+                    if (lastSequence == -1)
+                    {
+                        Log.DescriptorSequenceMustStartAtZero(_logger, serverComponent.Sequence);
+                    }
+                    else
+                    {
+                        Log.OutOfSequenceDescriptor(_logger, lastSequence, serverComponent.Sequence);
+                    }
                     descriptors.Clear();
                     return false;
                 }
 
-                if (lastSequence != -1 &&
-                    !CryptographicOperations.FixedTimeEquals(
-                        MemoryMarshal.AsBytes(previousInstance.InvocationId.AsSpan()),
-                        MemoryMarshal.AsBytes(instance.InvocationId.AsSpan())))
+                if (lastSequence != -1 && !previousInstance.InvocationId.Equals(serverComponent.InvocationId))
                 {
-                    Log.MismatchedInvocationId(_logger, previousInstance.InvocationId, instance.InvocationId);
+                    Log.MismatchedInvocationId(_logger, previousInstance.InvocationId.ToString("N"), serverComponent.InvocationId.ToString("N"));
                     return false;
                 }
 
                 // As described below, we build a chain of descriptors to prevent being flooded by
                 // descriptors from a client not behaving properly.
-                lastSequence = instance.Sequence;
-                previousInstance = instance;
+                lastSequence = serverComponent.Sequence;
+                previousInstance = serverComponent;
                 descriptors.Add(descriptor);
             }
 
             return true;
         }
 
-        private (ComponentDescriptor, ServerComponent) DeserializeComponentDescriptor(ServerComponentMarker record)
+        private (ComponentDescriptor, ServerComponent) DeserializeServerComponent(ServerComponentMarker record)
         {
             string unprotected;
             try
@@ -187,9 +187,9 @@ namespace Microsoft.AspNetCore.Components.Server
 
             private static readonly Action<ILogger, string, string, Exception> _failedToFindComponent =
                 LoggerMessage.Define<string, string>(
-                LogLevel.Debug,
-                new EventId(2, "FailedToFindComponent"),
-                "Failed to find component '{ComponentName}' in assembly '{Assembly}'.");
+                    LogLevel.Debug,
+                    new EventId(2, "FailedToFindComponent"),
+                    "Failed to find component '{ComponentName}' in assembly '{Assembly}'.");
 
             private static readonly Action<ILogger, Exception> _failedToUnprotectDescriptor =
                 LoggerMessage.Define(
@@ -199,33 +199,33 @@ namespace Microsoft.AspNetCore.Components.Server
 
             private static readonly Action<ILogger, string, Exception> _invalidMarkerType =
                 LoggerMessage.Define<string>(
-                LogLevel.Debug,
-                new EventId(4, "InvalidMarkerType"),
-                "Invalid component marker type '{}'.");
+                    LogLevel.Debug,
+                    new EventId(4, "InvalidMarkerType"),
+                    "Invalid component marker type '{}'.");
 
             private static readonly Action<ILogger, Exception> _missingMarkerDescriptor =
                 LoggerMessage.Define(
-                LogLevel.Debug,
-                new EventId(5, "MissingMarkerDescriptor"),
-                "The component marker is missing the descriptor.");
-
-            private static readonly Action<ILogger, Exception> _missingMarkerSequence =
-                LoggerMessage.Define(
-                LogLevel.Debug,
-                new EventId(6, "MissingMarkerSequence"),
-                "The component marker is missing the descriptor.");
+                    LogLevel.Debug,
+                    new EventId(5, "MissingMarkerDescriptor"),
+                    "The component marker is missing the descriptor.");
 
             private static readonly Action<ILogger, string, string, Exception> _mismatchedInvocationId =
                 LoggerMessage.Define<string, string>(
-                LogLevel.Debug,
-                new EventId(7, "MismatchedInvocationId"),
-                "The descriptor invocationId is '{invocationId}' and got a descriptor with invocationId '{currentInvocationId}'.");
+                    LogLevel.Debug,
+                    new EventId(6, "MismatchedInvocationId"),
+                    "The descriptor invocationId is '{invocationId}' and got a descriptor with invocationId '{currentInvocationId}'.");
 
             private static readonly Action<ILogger, int, int, Exception> _outOfSequenceDescriptor =
                 LoggerMessage.Define<int, int>(
-                LogLevel.Debug,
-                new EventId(8, "OutOfSequenceDescriptor"),
-                "The last descriptor sequence was '{lastSequence}' and got a descriptor with sequence '{receivedSequence}'.");
+                    LogLevel.Debug,
+                    new EventId(7, "OutOfSequenceDescriptor"),
+                    "The last descriptor sequence was '{lastSequence}' and got a descriptor with sequence '{receivedSequence}'.");
+
+            private static readonly Action<ILogger, int, Exception> _descriptorSequenceMustStartAtZero =
+                LoggerMessage.Define<int>(
+                    LogLevel.Debug,
+                    new EventId(9, "DescriptorSequenceMustStartAtZero"),
+                    "The descriptor sequence '{sequence}' is an invalid start sequence.");
 
             internal static void FailedToDeserializeDescriptor(ILogger<ServerComponentDeserializer> logger, Exception e) =>
                 _failedToDeserializeDescriptor(logger, e);
@@ -244,10 +244,11 @@ namespace Microsoft.AspNetCore.Components.Server
 
             internal static void MissingMarkerDescriptor(ILogger<ServerComponentDeserializer> logger) => _missingMarkerDescriptor(logger, null);
 
-            internal static void MissingMarkerSequence(ILogger<ServerComponentDeserializer> logger) => _failedToDeserializeDescriptor(logger, null);
-
             internal static void OutOfSequenceDescriptor(ILogger<ServerComponentDeserializer> logger, int lastSequence, int sequence) =>
                 _outOfSequenceDescriptor(logger, lastSequence, sequence, null);
+
+            internal static void DescriptorSequenceMustStartAtZero(ILogger<ServerComponentDeserializer> logger, int sequence) =>
+                _descriptorSequenceMustStartAtZero(logger, sequence, null);
         }
     }
 }

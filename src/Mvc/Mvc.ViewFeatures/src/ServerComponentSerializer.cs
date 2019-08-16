@@ -11,7 +11,6 @@ using Microsoft.AspNetCore.Http;
 
 namespace Microsoft.AspNetCore.Mvc.ViewFeatures
 {
-    // Shared settings for serializing and deserializing server components
     // **Component descriptor protocol**
     // MVC serializes one or more components as comments in HTML.
     // Each comment is in the form <!-- Blazor: <<Json>> -->
@@ -55,10 +54,12 @@ namespace Microsoft.AspNetCore.Mvc.ViewFeatures
     internal class ServerComponentSerializer
     {
         private static readonly object ComponentSequenceKey = new object();
-        private readonly IDataProtector _dataProtector;
+        private readonly ITimeLimitedDataProtector _dataProtector;
 
         public ServerComponentSerializer(IDataProtectionProvider dataProtectionProvider) =>
-            _dataProtector = dataProtectionProvider.CreateProtector(ServerComponentSerializationSettings.DataProtectionProviderPurpose);
+            _dataProtector = dataProtectionProvider
+                .CreateProtector(ServerComponentSerializationSettings.DataProtectionProviderPurpose)
+                .ToTimeLimitedDataProtector();
 
         public ServerComponentMarker SerializeInvocation(HttpContext context, Type type, bool prerendered)
         {
@@ -91,7 +92,8 @@ namespace Microsoft.AspNetCore.Mvc.ViewFeatures
                 rootComponent.FullName,
                 invocationId.Value);
 
-            return (serverComponent.Sequence, _dataProtector.Protect(JsonSerializer.Serialize(serverComponent, ServerComponentSerializationSettings.JsonSerializationOptions)));
+            var serializedServerComponent = JsonSerializer.Serialize(serverComponent, ServerComponentSerializationSettings.JsonSerializationOptions);
+            return (serverComponent.Sequence, _dataProtector.Protect(serializedServerComponent, ServerComponentSerializationSettings.DataExpiration));
         }
 
         internal IEnumerable<string> GetPreamble(ServerComponentMarker record)
@@ -142,17 +144,15 @@ namespace Microsoft.AspNetCore.Mvc.ViewFeatures
 
         private class ServerComponentInvocationSequence
         {
-            private static readonly RandomNumberGenerator _randomNumberGenerator = RandomNumberGenerator.Create();
-
             public ServerComponentInvocationSequence()
             {
-                Span<byte> bytes = stackalloc byte[32];
-                _randomNumberGenerator.GetBytes(bytes);
-                Value = Convert.ToBase64String(bytes);
+                Span<byte> bytes = stackalloc byte[16];
+                RandomNumberGenerator.Fill(bytes);
+                Value = new Guid(bytes);
                 Sequence = -1;
             }
 
-            public string Value { get; }
+            public Guid Value { get; }
 
             public int Sequence { get; private set; }
 

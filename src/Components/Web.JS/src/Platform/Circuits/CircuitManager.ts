@@ -31,8 +31,8 @@ export class CircuitDescriptor {
 
     const result = await connection.invoke<string>(
       'StartCircuit',
-      navigationManagerFunctions.getLocationHref(),
       navigationManagerFunctions.getBaseURI(),
+      navigationManagerFunctions.getLocationHref(),
       JSON.stringify(this.components.map(c => c.toRecord()))
     );
 
@@ -54,7 +54,7 @@ export class CircuitDescriptor {
   }
 }
 
-interface ComponentRecord {
+interface ComponentMarker {
   type: string;
   sequence: number;
   descriptor: string;
@@ -79,7 +79,7 @@ export class ComponentDescriptor {
     this.descriptor = descriptor;
   }
 
-  public toRecord(): ComponentRecord {
+  public toRecord(): ComponentMarker {
     const result = { type: this.type, sequence: this.sequence, descriptor: this.descriptor };
     return result;
   }
@@ -109,10 +109,9 @@ interface ComponentComment {
   type: 'server';
   sequence: number;
   descriptor: string;
-  selector: string;
   start: Node;
   end?: Node;
-  prerendered?: string;
+  prerenderId?: string;
 }
 
 function resolveComponentComments(node: Node): ComponentComment[] {
@@ -164,8 +163,8 @@ function getComponentComment(commentNodeIterator: ComponentCommentIterator): Com
 }
 
 function createComponentComment(json: string, start: Node, iterator: ComponentCommentIterator): ComponentComment {
-  const payload = JSON.parse(json);
-  const { type, sequence, selector, descriptor, prerendered } = payload;
+  const payload = JSON.parse(json) as ComponentComment;
+  const { type, sequence, descriptor, prerenderId } = payload;
   if (type !== 'server') {
     throw new Error(`Invalid component type '${type}'.`);
   }
@@ -178,32 +177,29 @@ function createComponentComment(json: string, start: Node, iterator: ComponentCo
     throw new Error('sequence must be defined when using a descriptor.');
   }
 
-  const parsedSequence = Number.parseInt(sequence);
-  if (Number.isNaN(parsedSequence)) {
+  if (!Number.isInteger(sequence)) {
     throw new Error(`Error parsing the sequence '${sequence}' for component '${json}'`);
   }
 
-  if (!prerendered) {
+  if (!prerenderId) {
     return {
       type,
-      selector,
-      sequence: parsedSequence,
+      sequence: sequence,
       descriptor,
       start,
     };
   } else {
-    const end = getComponentEndComment(prerendered, iterator);
+    const end = getComponentEndComment(prerenderId, iterator);
     if (!end) {
       throw new Error(`Could not find an end component comment for '${start}'`);
     }
 
     return {
       type,
-      selector,
-      sequence: parsedSequence,
+      sequence,
       descriptor,
       start,
-      prerendered,
+      prerenderId,
       end,
     };
   }
@@ -234,16 +230,16 @@ function getComponentEndComment(prerenderedId: string, iterator: ComponentCommen
 }
 
 function validateEndComponentPayload(json: string, prerenderedId: string): void {
-  const payload = JSON.parse(json);
+  const payload = JSON.parse(json) as ComponentComment;
   if (Object.keys(payload).length !== 1) {
     throw new Error(`Invalid end of component comment: '${json}'`);
   }
-  const { prerendered } = payload;
-  if (!prerendered) {
+  const prerenderedEndId = payload.prerenderId;
+  if (!prerenderedEndId) {
     throw new Error(`End of component comment must have a value for the prerendered property: '${json}'`);
   }
-  if (prerendered !== prerenderedId) {
-    throw new Error(`End of component comment prerendered property must match the start comment prerender id: '${prerenderedId}', '${prerendered}'`);
+  if (prerenderedEndId !== prerenderedId) {
+    throw new Error(`End of component comment prerendered property must match the start comment prerender id: '${prerenderedId}', '${prerenderedEndId}'`);
   }
 }
 

@@ -19,6 +19,7 @@
   <ItemGroup>
     <Reference Include="Microsoft.AspNetCore.Mvc.Core" />
     <Reference Include="Microsoft.AspNetCore.Mvc.DataAnnotations" />
+    <Reference Include="Microsoft.AspNetCore.DataProtection.Extensions" />
 
     <Reference Include="Microsoft.AspNetCore.Antiforgery" />
     <Reference Include="Microsoft.AspNetCore.Diagnostics.Abstractions" />

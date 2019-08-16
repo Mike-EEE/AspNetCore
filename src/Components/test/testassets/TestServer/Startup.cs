@@ -79,16 +79,30 @@ namespace TestServer
                     options.RequestCultureProviders.Add(new CookieRequestCultureProvider());
 
                     // We want the default to be en-US so that the tests for bind can work consistently.
-                    options.SetDefaultCulture("en-US"); 
+                    options.SetDefaultCulture("en-US");
                 });
 
-                app.UseRouting();
+                app.MapWhen(ctx => ctx.Request.Cookies.TryGetValue("__blazor_execution_mode", out var value) && value == "server",
+                    child =>
+                    {
+                        child.UseRouting();
+                        child.UseEndpoints(childEndpoints =>
+                        {
+                            childEndpoints.MapBlazorHub();
+                            childEndpoints.MapFallbackToPage("/_ServerHost");
+                        });
+                    });
 
-                app.UseEndpoints(endpoints =>
-                {
-                    endpoints.MapBlazorHub();
-                    endpoints.MapFallbackToClientSideBlazor<BasicTestApp.Startup>("index.html");
-                });
+                app.MapWhen(ctx => !ctx.Request.Query.ContainsKey("__blazor_execution_mode"),
+                    child =>
+                    {
+                        child.UseRouting();
+                        child.UseEndpoints(childEndpoints =>
+                        {
+                            childEndpoints.MapBlazorHub();
+                            childEndpoints.MapFallbackToClientSideBlazor<BasicTestApp.Startup>("index.html");
+                        });
+                    });
             });
 
             // Separately, mount a prerendered server-side Blazor app on /prerendered

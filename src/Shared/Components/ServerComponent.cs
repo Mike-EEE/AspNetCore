@@ -1,6 +1,8 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
+using System;
+
 namespace Microsoft.AspNetCore.Components
 {
     // The DTO that we data-protect and include into any
@@ -12,7 +14,7 @@ namespace Microsoft.AspNetCore.Components
             int sequence,
             string assemblyName,
             string typeName,
-            string invocationId) =>
+            Guid invocationId) =>
             (Sequence, AssemblyName, TypeName, InvocationId) = (sequence, assemblyName, typeName, invocationId);
 
         // The order in which this component was rendered
@@ -25,6 +27,6 @@ namespace Microsoft.AspNetCore.Components
         public string TypeName { get; set; }
 
         // An id that uniquely identifies all components generated as part of a single HTTP response.
-        public string InvocationId { get; set; }
+        public Guid InvocationId { get; set; }
     }
 }

@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
+using System.Diagnostics;
 using System.Net.Http;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -265,7 +266,7 @@ namespace Ignitor
             await PrepareForNextDisconnect(timeout ?? DefaultLatencyTimeout);
         }
 
-        public async Task<bool> ConnectAsync(Uri uri, bool prerendered, bool connectAutomatically = true)
+        public async Task<bool> ConnectAsync(Uri uri, bool connectAutomatically = true)
         {
             var builder = new HubConnectionBuilder();
             builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IHubProtocol, IgnitorMessagePackHubProtocol>());
@@ -293,21 +294,11 @@ namespace Ignitor
                 return true;
             }
 
-            // Now everything is registered so we can start the circuit.
-            if (prerendered)
-            {
-                CircuitId = await GetPrerenderedCircuitIdAsync(uri);
-                var result = false;
-                await ExpectRenderBatch(async () => result = await HubConnection.InvokeAsync<bool>("ConnectCircuit", CircuitId));
-                return result;
-            }
-            else
-            {
-                await ExpectRenderBatch(
-                    async () => CircuitId = await HubConnection.InvokeAsync<string>("StartCircuit", uri, uri),
-                    TimeSpan.FromSeconds(10));
-                return CircuitId != null;
-            }
+            var descriptor = await GetPrerenderDescriptors(uri);
+            await ExpectRenderBatch(
+                async () => CircuitId = await HubConnection.InvokeAsync<string>("StartCircuit", uri, uri, descriptor),
+                TimeSpan.FromSeconds(10));
+            return CircuitId != null;
         }
 
         private void OnEndInvokeDotNet(string completion)
@@ -391,17 +382,15 @@ namespace Ignitor
             await ExpectDotNetInterop(() => HubConnection.InvokeAsync("BeginInvokeDotNetFromJS", callId?.ToString(), assemblyName, methodIdentifier, dotNetObjectId ?? 0, argsJson));
         }
 
-        private static async Task<string> GetPrerenderedCircuitIdAsync(Uri uri)
+        public async Task<string> GetPrerenderDescriptors(Uri uri)
         {
             var httpClient = new HttpClient();
+            Debug.Assert(httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Cookie", "__blazor_execution_mode=server"));
             var response = await httpClient.GetAsync(uri);
             var content = await response.Content.ReadAsStringAsync();
 
-            // <!-- M.A.C.Component:{"circuitId":"CfDJ8KZCIaqnXmdF...PVd6VVzfnmc1","rendererId":"0","componentId":"0"} -->
-            var match = Regex.Match(content, $"{Regex.Escape("<!-- M.A.C.Component:")}(.+?){Regex.Escape(" -->")}");
-            var json = JsonDocument.Parse(match.Groups[1].Value);
-            var circuitId = json.RootElement.GetProperty("circuitId").GetString();
-            return circuitId;
+            var match = Regex.Match(content, $"{Regex.Escape("<!--Blazor:")}(.+?){Regex.Escape("-->")}");
+            return $"[{match.Groups[1].Value}]";
         }
 
         public void Cancel()
